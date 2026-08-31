@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<p style="margin: 0 0 1.25rem;">
+    <a class="button-link" href="{{ url_for('incubazione_nuova') }}">+ Nuova incubazione</a>
+</p>
+
+<div class="box-grid">
+    {% for g in gruppi %}
+    <div class="card">
+        <div class="piramide-header">
+            <span class="razza-name">{{ g.razza }}</span>
+            <span class="razza-total">{{ g.uova_in_incubazione }} uova in incubazione</span>
+        </div>
+        {% if g.batch %}
+        {% for b in g.batch %}
+        <div class="incubazione-batch">
+            <p class="hint" style="margin: 0 0 0.5rem;">
+                Dal {{ b.data_inizio }} · {{ b.uova_impostate }} uova
+                {% if b.uova_infertili %} · {{ b.uova_infertili }} scartate{% endif %}
+                {% if b.schiusa_registrata %} · {{ b.pulcini_da_promuovere }} pulcini da promuovere{% endif %}
+            </p>
+            <div class="incubazione-azioni">
+                {% if not b.schiusa_registrata %}
+                <a class="button-link button-link-secondary" href="{{ url_for('incubazione_schiusa', incubazione_id=b.id) }}">Registra schiusa</a>
+                <a class="button-link button-link-secondary" href="{{ url_for('incubazione_scarti', incubazione_id=b.id) }}">Registra scarti</a>
+                {% else %}
+                <a class="button-link" href="{{ url_for('incubazione_promuovi', incubazione_id=b.id) }}">Promuovi a Pulcinaia</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="hint">Nessuna incubazione attiva.</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

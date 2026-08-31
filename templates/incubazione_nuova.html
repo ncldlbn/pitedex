@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">Nuova incubazione</h1>
+<div class="card card-form">
+<form method="post">
+    <label>Razza
+        <select name="razza_id" required>
+            {% for r in razze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Data inizio incubazione
+        <input type="date" name="data_inizio" value="{{ oggi_iso }}" max="{{ oggi_iso }}" required>
+    </label>
+    <label>Uova impostate
+        <input type="number" name="uova_impostate" min="1" value="1" required>
+    </label>
+    <button type="submit">Avvia incubazione</button>
+</form>
+</div>
+{% endblock %}

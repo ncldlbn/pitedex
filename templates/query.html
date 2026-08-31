@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">Query</h1>
+
+<div class="card">
+    <form method="get" class="query-form">
+        <label>Razza
+            <select name="razza_id">
+                <option value="">Tutte</option>
+                {% for r in razze %}
+                <option value="{{ r.id }}" {{ 'selected' if filtri.razza_id == r.id|string else '' }}>{{ r.nome }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Sesso
+            <select name="sesso">
+                <option value="">Tutti</option>
+                <option value="F" {{ 'selected' if filtri.sesso == 'F' else '' }}>Femmina</option>
+                <option value="M" {{ 'selected' if filtri.sesso == 'M' else '' }}>Maschio</option>
+            </select>
+        </label>
+        <label>Destinazione
+            <select name="destinazione">
+                <option value="">Tutte</option>
+                {% for k, v in destinazioni.items() %}
+                <option value="{{ k }}" {{ 'selected' if filtri.destinazione == k else '' }}>{{ v }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Classe età
+            <select name="classe_eta">
+                <option value="">Tutte</option>
+                {% for c in classi_eta %}
+                <option value="{{ c }}" {{ 'selected' if filtri.classe_eta == c else '' }}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit">Filtra</button>
+        <a class="button-link button-link-secondary" href="{{ url_for('query') }}">Azzera</a>
+    </form>
+</div>
+
+<p class="hint" style="margin: 1rem 0;">{{ risultati|length }} lotti trovati · {{ totale_capi }} capi totali</p>
+
+<div class="card">
+    <div class="matrice-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>Razza</th>
+                    <th>Sesso</th>
+                    <th>Età (mesi)</th>
+                    <th>Classe</th>
+                    <th>Destinazione</th>
+                    <th>N. capi</th>
+                    <th>Data ingresso</th>
+                    <th>Prezzo acquisto</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in risultati %}
+                <tr>
+                    <td>{{ l.razza_nome }}</td>
+                    <td>{{ l.sesso }}</td>
+                    <td class="num">{{ l.eta_mesi_attuale }}</td>
+                    <td>{{ l.classe_eta }}</td>
+                    <td><span class="badge">{{ destinazioni[l.destinazione] }}</span></td>
+                    <td class="num">{{ l.numero_capi_attuale }}</td>
+                    <td>{{ l.data_ingresso }}</td>
+                    <td class="num">{{ '%.2f'|format(l.prezzo_acquisto_totale) if l.prezzo_acquisto_totale is not none else '–' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="empty">Nessun lotto corrisponde ai filtri.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

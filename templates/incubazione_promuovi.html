@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">Promuovi a Pulcinaia</h1>
+<p class="hint" style="margin: -0.75rem 0 1.25rem;">{{ incubazione.razza_nome }} · {{ disponibili }} pulcini nati non ancora spostati in Pulcinaia</p>
+{% if disponibili > 0 %}
+<div class="card card-form">
+<form method="post">
+    <label>Numero pulcini da spostare
+        <input type="number" name="numero_capi" min="1" max="{{ disponibili }}" value="{{ disponibili }}" required>
+    </label>
+    <button type="submit">Sposta in Pulcinaia</button>
+</form>
+</div>
+{% else %}
+<div class="card">
+    <p class="empty">Nessun pulcino disponibile per la promozione.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<p style="margin: 0 0 1.25rem;">
+    <a class="button-link" href="{{ url_for('pulcinaia_nuova') }}">+ Acquisto esterno</a>
+</p>
+
+<div class="box-grid">
+    {% for g in gruppi %}
+    <div class="card">
+        <div class="piramide-header">
+            <span class="razza-name">{{ g.razza }}</span>
+            <span class="razza-total">{{ g.totale_capi }} pulcini</span>
+        </div>
+        {% if g.lotti %}
+        {% for l in g.lotti %}
+        <div class="incubazione-batch">
+            <p class="hint" style="margin: 0 0 0.5rem;">
+                {{ l.numero_capi_attuale }} capi · {{ l.eta_mesi_attuale }} mesi ({{ l.classe_eta }})
+                · {{ 'Incubazione' if l.incubazione_id else 'Acquisto' }} · dal {{ l.data_ingresso }}
+            </p>
+            <div class="incubazione-azioni">
+                <a class="button-link button-link-secondary" href="{{ url_for('pulcinaia_uscita', pulcini_id=l.id) }}">Registra uscita</a>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="hint">Nessun pulcino in pulcinaia.</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

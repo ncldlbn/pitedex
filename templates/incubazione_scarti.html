@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">Registra scarti</h1>
+<p class="hint" style="margin: -0.75rem 0 1.25rem;">{{ incubazione.razza_nome }} · {{ incubazione.uova_impostate }} uova impostate il {{ incubazione.data_inizio }}</p>
+<div class="card card-form">
+<form method="post">
+    <label>Uova scartate/infertili (speratura)
+        <input type="number" name="uova_infertili" min="0" max="{{ incubazione.uova_impostate }}" value="{{ incubazione.uova_infertili or 0 }}" required>
+    </label>
+    <p class="hint">Le uova risultate chiare o non fertili alla speratura, individuate prima della schiusa.</p>
+    <button type="submit">Registra</button>
+</form>
+</div>
+{% endblock %}

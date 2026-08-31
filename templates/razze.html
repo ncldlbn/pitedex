@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">Razze</h1>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Pollastro da</th>
+                <th>Produttivo da</th>
+                <th>Pensionato da</th>
+                <th>Rivendita (mesi)</th>
+                <th>Macellazione (mesi)</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in razze %}
+            <tr>
+                <td>{{ r.nome }}</td>
+                <td class="num">{{ r.eta_pollastro_mesi }}</td>
+                <td class="num">{{ r.eta_produttivo_mesi }}</td>
+                <td class="num">{{ r.eta_pensionato_mesi }}</td>
+                <td class="num">{{ r.rivendita_eta_min_mesi if r.rivendita_eta_min_mesi is not none else '–' }} - {{ r.rivendita_eta_max_mesi if r.rivendita_eta_max_mesi is not none else '–' }}</td>
+                <td class="num">{{ r.macellazione_eta_min_mesi if r.macellazione_eta_min_mesi is not none else '–' }} - {{ r.macellazione_eta_max_mesi if r.macellazione_eta_max_mesi is not none else '–' }}</td>
+                <td><a href="{{ url_for('razza_modifica', razza_id=r.id) }}">Modifica</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty">Nessuna razza configurata.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p style="margin-top: 1.25rem;">
+    <a class="button-link" href="{{ url_for('razza_nuova') }}">+ Nuova razza</a>
+</p>
+{% endblock %}

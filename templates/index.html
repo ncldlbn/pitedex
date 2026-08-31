@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="filter-chips">
+    <a href="{{ url_for('index', destinazione='tutte') }}" class="chip {{ 'active' if destinazione_filtro == 'tutte' else '' }}">Tutte le destinazioni</a>
+    {% for k, v in destinazioni.items() %}
+    <a href="{{ url_for('index', destinazione=k) }}" class="chip {{ 'active' if destinazione_filtro == k else '' }}">
+        <span class="chip-dot" style="background: {{ colori_destinazione[k] }}"></span>{{ v }}
+    </a>
+    {% endfor %}
+</div>
+
+<div class="piramide-grid">
+    {% for r in razze %}
+    <div class="card piramide-card">
+        <div class="piramide-header">
+            <span class="razza-name">{{ r.razza }}</span>
+            <span class="razza-total">{{ r.totale }} capi</span>
+        </div>
+        <div class="piramide-righe">
+            {% for c in r.classi %}
+            <div class="piramide-riga {{ '' if c.classe == 'Produttivo' else 'piramide-riga-attenuata' }}">
+                <div class="piramide-lato piramide-m">
+                    {% if c.M > 0 %}<span class="piramide-valore testo-m">{{ c.M }}</span>{% endif %}
+                    <div class="piramide-barra piramide-barra-m" style="width: {{ c.percento_m }}%;"></div>
+                </div>
+                <div class="piramide-etichetta">{{ c.classe }}</div>
+                <div class="piramide-lato piramide-f">
+                    <div class="piramide-barra piramide-barra-f" style="width: {{ c.percento_f }}%;"></div>
+                    {% if c.F > 0 %}<span class="piramide-valore testo-f">{{ c.F }}</span>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <p class="empty">Nessun capo registrato.</p>
+    {% endfor %}
+</div>
+{% endblock %}

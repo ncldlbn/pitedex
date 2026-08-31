@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">Acquisto esterno di pulcini</h1>
+<div class="card card-form">
+<form method="post">
+    <label>Numero pulcini
+        <input type="number" name="numero_capi" value="1" min="1" required>
+    </label>
+    <label>Razza
+        <select name="razza_id" required>
+            {% for r in razze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Data di nascita
+        <input type="date" name="data_nascita" max="{{ oggi_iso }}" required>
+    </label>
+    <label>Prezzo acquisto totale (€)
+        <input type="number" name="prezzo_acquisto" step="0.01" min="0">
+    </label>
+    <button type="submit">Aggiungi a Pulcinaia</button>
+</form>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Gestionale Pollaio{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="navbar-brand">
+            <span class="navbar-logo" aria-hidden="true">🐔</span>
+            <span>Gestionale Pollaio</span>
+        </div>
+        <div class="navbar-date">{{ oggi }}</div>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <nav>
+                <a href="{{ url_for('incubazione_lista') }}" class="nav-link {{ 'active' if request.endpoint in ['incubazione_lista', 'incubazione_nuova', 'incubazione_schiusa', 'incubazione_scarti', 'incubazione_promuovi'] else '' }}">
+                    <span class="nav-icon" aria-hidden="true">🥚</span> Incubazione
+                </a>
+                <a href="{{ url_for('pulcinaia_lista') }}" class="nav-link {{ 'active' if request.endpoint in ['pulcinaia_lista', 'pulcinaia_nuova', 'pulcinaia_uscita'] else '' }}">
+                    <span class="nav-icon" aria-hidden="true">🐤</span> Pulcinaia
+                </a>
+                <a href="{{ url_for('index') }}" class="nav-link {{ 'active' if request.endpoint == 'index' else '' }}">
+                    <span class="nav-icon" aria-hidden="true">🐔</span> Pollaio
+                </a>
+                <a href="{{ url_for('query') }}" class="nav-link {{ 'active' if request.endpoint == 'query' else '' }}">
+                    <span class="nav-icon" aria-hidden="true">🔍</span> Query
+                </a>
+                <a href="{{ url_for('razze_lista') }}" class="nav-link {{ 'active' if request.endpoint in ['razze_lista', 'razza_nuova', 'razza_modifica'] else '' }}">
+                    <span class="nav-icon" aria-hidden="true">🐓</span> Razze
+                </a>
+            </nav>
+        </aside>
+
+        <main class="content">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <ul class="flash">
+                        {% for m in messages %}<li>{{ m }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>
