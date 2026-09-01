@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<p style="margin: 0 0 1.25rem;">
+    <a class="button-link" href="{{ url_for('registro_uova_raccolta') }}">+ Raccolta</a>
+    <a class="button-link button-link-secondary" href="{{ url_for('registro_uova_vendita') }}">+ Vendita</a>
+</p>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Razza</th>
+                <th>Uova in giacenza</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for g in gruppi %}
+            <tr>
+                <td>{{ g.razza }}</td>
+                <td class="num">{{ g.giacenza }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="empty">Nessuna razza configurata.</td></tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td><strong>Totale</strong></td>
+                <td class="num"><strong>{{ totale_giacenza }}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}

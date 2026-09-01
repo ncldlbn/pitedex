@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block content %}
+{% call macros.form_page("Raccolta uova") %}
+    <label>Razza
+        <select name="razza_id" required>
+            {% for r in razze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Numero uova
+        <input type="number" name="numero_uova" min="1" value="1" required>
+    </label>
+    <button type="submit">Registra raccolta</button>
+{% endcall %}
+{% endblock %}

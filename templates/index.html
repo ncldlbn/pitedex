@@ -1,39 +1,367 @@
 {% extends "base.html" %}
+{% import "_macros.html" as macros %}
 {% block content %}
-<div class="filter-chips">
-    <a href="{{ url_for('index', destinazione='tutte') }}" class="chip {{ 'active' if destinazione_filtro == 'tutte' else '' }}">Tutte le destinazioni</a>
-    {% for k, v in destinazioni.items() %}
-    <a href="{{ url_for('index', destinazione=k) }}" class="chip {{ 'active' if destinazione_filtro == k else '' }}">
-        <span class="chip-dot" style="background: {{ colori_destinazione[k] }}"></span>{{ v }}
-    </a>
-    {% endfor %}
+<div class="azioni-bar">
+    <div class="azioni-bar-gruppo">
+        {{ macros.modal_trigger("modal-entrata", "Registra ingresso") }}
+        {{ macros.modal_trigger("modal-vendita", "Registra vendita", "button-link button-link-secondary") }}
+        {{ macros.modal_trigger("modal-macellazione", "Registra macellazione", "button-link button-link-secondary") }}
+        {{ macros.modal_trigger("modal-perdita", "Registra perdita", "button-link button-link-secondary") }}
+        {{ macros.modal_trigger("modal-cambio-destinazione", "Cambio destinazione", "button-link button-link-secondary") }}
+    </div>
+    <div class="controlli-vista">
+        <label class="controllo-colonne">
+            Colonne
+            <input type="range" id="colonne-slider" min="1" max="4" value="3">
+            <span id="colonne-valore">3</span>
+        </label>
+        <label class="controllo-ordine">
+            Ordina per
+            <select id="ordine-select">
+                <option value="numero-desc">Più numerosi</option>
+                <option value="numero-asc">Meno numerosi</option>
+                <option value="alfa-asc" selected>A → Z</option>
+                <option value="alfa-desc">Z → A</option>
+            </select>
+        </label>
+        <label class="controllo-vista">
+            Vista
+            <select id="vista-select">
+                <option value="destinazione" selected>Destinazione d'uso</option>
+                <option value="sesso">Sesso</option>
+                <option value="anno_nascita">Anno di nascita</option>
+            </select>
+        </label>
+    </div>
 </div>
 
-<div class="piramide-grid">
-    {% for r in razze %}
-    <div class="card piramide-card">
-        <div class="piramide-header">
-            <span class="razza-name">{{ r.razza }}</span>
-            <span class="razza-total">{{ r.totale }} capi</span>
+<div class="box-grid" style="margin-bottom: 1.5rem;">
+    {% for razza in composizione_razze %}
+    <div class="card" data-totale="{{ razza.totale }}" data-nome="{{ razza.nome }}">
+        <div class="card-header">
+            <a class="razza-name" href="{{ url_for('pollaio_razza_dettaglio', razza_id=razza.razza_id) }}">{{ razza.nome }}</a>
+            <span class="razza-total">{{ razza.totale }} capi</span>
         </div>
-        <div class="piramide-righe">
-            {% for c in r.classi %}
-            <div class="piramide-riga {{ '' if c.classe == 'Produttivo' else 'piramide-riga-attenuata' }}">
-                <div class="piramide-lato piramide-m">
-                    {% if c.M > 0 %}<span class="piramide-valore testo-m">{{ c.M }}</span>{% endif %}
-                    <div class="piramide-barra piramide-barra-m" style="width: {{ c.percento_m }}%;"></div>
-                </div>
-                <div class="piramide-etichetta">{{ c.classe }}</div>
-                <div class="piramide-lato piramide-f">
-                    <div class="piramide-barra piramide-barra-f" style="width: {{ c.percento_f }}%;"></div>
-                    {% if c.F > 0 %}<span class="piramide-valore testo-f">{{ c.F }}</span>{% endif %}
-                </div>
+        {% for sesso in razza.sessi %}
+        <div class="incubazione-batch">
+            <div class="sesso-header">
+                <span class="sesso-label">{{ sesso.label }}</span>
+                <span class="sesso-totale">{{ sesso.totale }}</span>
             </div>
-            {% endfor %}
+            <div class="barre-orizzontali vista-blocco" data-vista="destinazione">
+                {% for b in sesso.barre_destinazione %}
+                <div class="barra-riga">
+                    <span class="barra-etichetta">{{ b.etichetta }}</span>
+                    <span class="barra-traccia">
+                        <span class="barra-riempimento" style="width: {{ b.percento }}%;{% if b.totale == 0 %} min-width: 0;{% endif %}"></span>
+                    </span>
+                    <span class="barra-valore">{{ b.totale }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="barre-orizzontali vista-blocco" data-vista="anno_nascita" style="display: none;">
+                {% for b in sesso.barre_anno %}
+                <div class="barra-riga">
+                    <span class="barra-etichetta">{{ b.etichetta }}</span>
+                    <span class="barra-traccia">
+                        <span class="barra-riempimento" style="width: {{ b.percento }}%;{% if b.totale == 0 %} min-width: 0;{% endif %}"></span>
+                    </span>
+                    <span class="barra-valore">{{ b.totale }}</span>
+                </div>
+                {% endfor %}
+            </div>
         </div>
+        {% endfor %}
     </div>
     {% else %}
     <p class="empty">Nessun capo registrato.</p>
     {% endfor %}
 </div>
+
+{% call macros.modal("modal-entrata", "Nuovo ingresso in pollaio", url_for('pollaio_nuova')) %}
+    <label>Tipo
+        <select name="evento" id="entrata-evento" required>
+            <option value="acquisto">Acquisto esterno</option>
+            <option value="promozione">Da Pulcinaia</option>
+        </select>
+    </label>
+
+    <label id="acquisto-razza-label">Razza
+        <select id="acquisto-razza" required>
+            {% for r in elenco_razze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}
+        </select>
+    </label>
+    <label id="acquisto-anno-label">Anno di nascita
+        <input type="number" id="acquisto-anno" min="2000" max="{{ oggi_iso[:4] }}" value="{{ oggi_iso[:4] }}" required>
+    </label>
+
+    <label id="promo-gruppo-label">Gruppo (da Pulcinaia)
+        <select id="promo-gruppo" required>
+            {% for l in gruppi_pulcinaia %}
+            <option value="{{ l.razza_id }}|{{ l.data_nascita }}" data-max="{{ l.numero_capi_attuale }}">
+                {{ l.razza_nome }} · nati il {{ l.data_nascita }} · {{ l.numero_capi_attuale }} disponibili
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+    <input type="hidden" id="promo-razza-id">
+    <input type="hidden" id="promo-data-nascita">
+
+    <label>Sesso
+        <select name="sesso" required>
+            <option value="F">Femmina</option>
+            <option value="M">Maschio</option>
+        </select>
+    </label>
+    <label>Destinazione d'uso
+        <select name="destinazione" required>
+            {% for k, v in destinazioni.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Numero capi
+        <input type="number" name="numero_capi" id="entrata-numero" value="1" min="1" required>
+    </label>
+    <label id="acquisto-prezzo-label">Prezzo acquisto totale (€)
+        <input type="number" name="prezzo_acquisto" step="0.01" min="0">
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+
+{% call macros.modal("modal-vendita", "Vendita da Pollaio", url_for('pollaio_uscita')) %}
+    <input type="hidden" name="tipo" value="vendita">
+    <input type="hidden" name="razza_id" id="vendita-razza-id">
+    <input type="hidden" name="sesso" id="vendita-sesso">
+    <input type="hidden" name="anno_nascita" id="vendita-anno-nascita">
+    <input type="hidden" name="destinazione" id="vendita-destinazione">
+    <label>Gruppo
+        <select id="vendita-gruppo" required>
+            {% for g in gruppi_pollaio if g.destinazione == 'rivendita' %}
+            <option value="{{ g.razza_id }}|{{ g.sesso }}|{{ g.anno_nascita }}|{{ g.destinazione }}" data-max="{{ g.numero_capi_attuale }}">
+                {{ g.razza_nome }} · {{ g.sesso }} · {{ g.numero_capi_attuale }} disponibili
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Numero capi
+        <input type="number" name="numero_capi" id="vendita-numero" value="1" min="1" required>
+    </label>
+    <label>Prezzo di vendita totale (€)
+        <input type="number" name="prezzo_vendita" id="vendita-prezzo" step="0.01" min="0">
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+
+{% call macros.modal("modal-macellazione", "Macellazione da Pollaio", url_for('pollaio_uscita')) %}
+    <input type="hidden" name="tipo" value="macellazione">
+    <input type="hidden" name="razza_id" id="macellazione-razza-id">
+    <input type="hidden" name="sesso" id="macellazione-sesso">
+    <input type="hidden" name="anno_nascita" id="macellazione-anno-nascita">
+    <input type="hidden" name="destinazione" id="macellazione-destinazione">
+    <label>Gruppo
+        <select id="macellazione-gruppo" required>
+            {% for g in gruppi_pollaio if g.destinazione == 'carne' %}
+            <option value="{{ g.razza_id }}|{{ g.sesso }}|{{ g.anno_nascita }}|{{ g.destinazione }}" data-max="{{ g.numero_capi_attuale }}">
+                {{ g.razza_nome }} · {{ g.sesso }} · {{ g.numero_capi_attuale }} disponibili
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Numero capi
+        <input type="number" name="numero_capi" id="macellazione-numero" value="1" min="1" required>
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+
+{% call macros.modal("modal-perdita", "Perdita da Pollaio", url_for('pollaio_uscita')) %}
+    <input type="hidden" name="tipo" value="perdita">
+    <input type="hidden" name="razza_id" id="perdita-razza-id">
+    <input type="hidden" name="sesso" id="perdita-sesso">
+    <input type="hidden" name="anno_nascita" id="perdita-anno-nascita">
+    <input type="hidden" name="destinazione" id="perdita-destinazione">
+    <label>Gruppo
+        <select id="perdita-gruppo" required>
+            {% for g in gruppi_pollaio %}
+            <option value="{{ g.razza_id }}|{{ g.sesso }}|{{ g.anno_nascita }}|{{ g.destinazione }}" data-max="{{ g.numero_capi_attuale }}">
+                {{ g.razza_nome }} · {{ g.sesso }} · {{ destinazioni[g.destinazione] }} · {{ g.numero_capi_attuale }} disponibili
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Numero capi
+        <input type="number" name="numero_capi" id="perdita-numero" value="1" min="1" required>
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+
+{% call macros.modal("modal-cambio-destinazione", "Cambio destinazione", url_for('pollaio_cambio_destinazione')) %}
+    <input type="hidden" name="razza_id" id="cd-razza-id">
+    <input type="hidden" name="sesso" id="cd-sesso">
+    <input type="hidden" name="anno_nascita" id="cd-anno-nascita">
+    <input type="hidden" name="destinazione" id="cd-destinazione">
+    <label>Gruppo
+        <select id="cd-gruppo" required>
+            {% for g in gruppi_pollaio %}
+            <option value="{{ g.razza_id }}|{{ g.sesso }}|{{ g.anno_nascita }}|{{ g.destinazione }}" data-max="{{ g.numero_capi_attuale }}">
+                {{ g.razza_nome }} · {{ g.sesso }} · attualmente {{ destinazioni[g.destinazione] }} · {{ g.numero_capi_attuale }} disponibili
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Numero capi da spostare
+        <input type="number" name="numero_capi" id="cd-numero" value="1" min="1" required>
+    </label>
+    <label>Nuova destinazione
+        <select name="nuova_destinazione" required>
+            {% for k, v in destinazioni.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+        </select>
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+
+<script>
+    (function () {
+        const evento = document.getElementById("entrata-evento");
+        const acquistoRazzaLabel = document.getElementById("acquisto-razza-label");
+        const acquistoAnnoLabel = document.getElementById("acquisto-anno-label");
+        const acquistoPrezzoLabel = document.getElementById("acquisto-prezzo-label");
+        const promoGruppoLabel = document.getElementById("promo-gruppo-label");
+        const acquistoRazza = document.getElementById("acquisto-razza");
+        const acquistoAnno = document.getElementById("acquisto-anno");
+        const promoGruppo = document.getElementById("promo-gruppo");
+        const promoRazzaId = document.getElementById("promo-razza-id");
+        const promoDataNascita = document.getElementById("promo-data-nascita");
+        const numeroCapi = document.getElementById("entrata-numero");
+
+        function aggiornaGruppoPromo() {
+            const opzione = promoGruppo.selectedOptions[0];
+            if (!opzione) return;
+            const [razzaId, dataNascita] = opzione.value.split("|");
+            promoRazzaId.value = razzaId;
+            promoDataNascita.value = dataNascita;
+            numeroCapi.max = opzione.dataset.max;
+        }
+
+        function aggiorna() {
+            const promozione = evento.value === "promozione";
+
+            acquistoRazzaLabel.style.display = promozione ? "none" : "";
+            acquistoAnnoLabel.style.display = promozione ? "none" : "";
+            acquistoPrezzoLabel.style.display = promozione ? "none" : "";
+            promoGruppoLabel.style.display = promozione ? "" : "none";
+
+            if (promozione) {
+                promoRazzaId.name = "razza_id";
+                promoDataNascita.name = "data_nascita";
+                acquistoRazza.removeAttribute("name");
+                acquistoAnno.removeAttribute("name");
+                aggiornaGruppoPromo();
+            } else {
+                acquistoRazza.name = "razza_id";
+                acquistoAnno.name = "anno_nascita";
+                promoRazzaId.removeAttribute("name");
+                promoDataNascita.removeAttribute("name");
+                numeroCapi.removeAttribute("max");
+            }
+        }
+
+        evento.addEventListener("change", aggiorna);
+        promoGruppo.addEventListener("change", aggiornaGruppoPromo);
+        aggiorna();
+    })();
+
+    function initModaleUscita(prefix) {
+        const gruppo = document.getElementById(prefix + "-gruppo");
+        const numero = document.getElementById(prefix + "-numero");
+        if (!gruppo) return;
+        const campi = {
+            razza_id: document.getElementById(prefix + "-razza-id"),
+            sesso: document.getElementById(prefix + "-sesso"),
+            anno_nascita: document.getElementById(prefix + "-anno-nascita"),
+            destinazione: document.getElementById(prefix + "-destinazione"),
+        };
+
+        function aggiorna() {
+            const opzione = gruppo.selectedOptions[0];
+            if (!opzione) return;
+            const [razzaId, sesso, annoNascita, destinazione] = opzione.value.split("|");
+            campi.razza_id.value = razzaId;
+            campi.sesso.value = sesso;
+            campi.anno_nascita.value = annoNascita;
+            campi.destinazione.value = destinazione;
+            numero.max = opzione.dataset.max;
+        }
+
+        gruppo.addEventListener("change", aggiorna);
+        aggiorna();
+    }
+
+    initModaleUscita("vendita");
+    initModaleUscita("macellazione");
+    initModaleUscita("perdita");
+
+    (function () {
+        const gruppo = document.getElementById("cd-gruppo");
+        const numero = document.getElementById("cd-numero");
+        const campi = {
+            razza_id: document.getElementById("cd-razza-id"),
+            sesso: document.getElementById("cd-sesso"),
+            anno_nascita: document.getElementById("cd-anno-nascita"),
+            destinazione: document.getElementById("cd-destinazione"),
+        };
+
+        function aggiorna() {
+            const opzione = gruppo.selectedOptions[0];
+            if (!opzione) return;
+            const [razzaId, sesso, annoNascita, destinazione] = opzione.value.split("|");
+            campi.razza_id.value = razzaId;
+            campi.sesso.value = sesso;
+            campi.anno_nascita.value = annoNascita;
+            campi.destinazione.value = destinazione;
+            numero.max = opzione.dataset.max;
+        }
+
+        gruppo.addEventListener("change", aggiorna);
+        aggiorna();
+    })();
+
+    (function () {
+        const griglia = document.querySelector(".box-grid");
+        const sliderColonne = document.getElementById("colonne-slider");
+        const valoreColonne = document.getElementById("colonne-valore");
+        const selectOrdine = document.getElementById("ordine-select");
+        const selectVista = document.getElementById("vista-select");
+        if (!griglia || !sliderColonne || !selectOrdine || !selectVista) return;
+
+        function aggiornaColonne() {
+            griglia.style.setProperty("--colonne", sliderColonne.value);
+            valoreColonne.textContent = sliderColonne.value;
+        }
+
+        function aggiornaOrdine() {
+            const schede = Array.from(griglia.children).filter(el => el.classList.contains("card"));
+            const criterio = selectOrdine.value;
+            schede.sort((a, b) => {
+                if (criterio === "numero-desc") return b.dataset.totale - a.dataset.totale;
+                if (criterio === "numero-asc") return a.dataset.totale - b.dataset.totale;
+                if (criterio === "alfa-desc") return b.dataset.nome.localeCompare(a.dataset.nome, "it");
+                return a.dataset.nome.localeCompare(b.dataset.nome, "it"); // alfa-asc
+            });
+            schede.forEach(el => griglia.appendChild(el));
+        }
+
+        function aggiornaVista() {
+            const vista = selectVista.value;
+            document.querySelectorAll(".vista-blocco").forEach(el => {
+                el.style.display = (vista !== "sesso" && el.dataset.vista === vista) ? "" : "none";
+            });
+        }
+
+        sliderColonne.addEventListener("input", aggiornaColonne);
+        selectOrdine.addEventListener("change", aggiornaOrdine);
+        selectVista.addEventListener("change", aggiornaVista);
+        aggiornaColonne();
+        aggiornaVista();
+    })();
+</script>
+
 {% endblock %}

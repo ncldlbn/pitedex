@@ -1,32 +1,185 @@
 {% extends "base.html" %}
+{% import "_macros.html" as macros %}
 {% block content %}
-<p style="margin: 0 0 1.25rem;">
-    <a class="button-link" href="{{ url_for('pulcinaia_nuova') }}">+ Acquisto esterno</a>
-</p>
+<div class="azioni-bar">
+    <div class="azioni-bar-gruppo">
+        {{ macros.modal_trigger("modal-entrata", "Registra ingresso") }}
+        {{ macros.modal_trigger("modal-perdita", "Registra perdita", "button-link button-link-secondary") }}
+        {{ macros.modal_trigger("modal-vendita", "Registra vendita", "button-link button-link-secondary") }}
+    </div>
+    <div class="controlli-vista">
+        <label class="controllo-colonne">
+            Colonne
+            <input type="range" id="colonne-slider" min="1" max="4" value="3">
+            <span id="colonne-valore">3</span>
+        </label>
+        <label class="controllo-ordine">
+            Ordina per
+            <select id="ordine-select">
+                <option value="numero-desc">Più numerosi</option>
+                <option value="numero-asc">Meno numerosi</option>
+                <option value="alfa-asc" selected>A → Z</option>
+                <option value="alfa-desc">Z → A</option>
+            </select>
+        </label>
+    </div>
+</div>
 
 <div class="box-grid">
     {% for g in gruppi %}
-    <div class="card">
-        <div class="piramide-header">
+    <div class="card" data-totale="{{ g.totale_capi }}" data-nome="{{ g.razza }}">
+        <div class="card-header">
             <span class="razza-name">{{ g.razza }}</span>
             <span class="razza-total">{{ g.totale_capi }} pulcini</span>
         </div>
-        {% if g.lotti %}
-        {% for l in g.lotti %}
-        <div class="incubazione-batch">
-            <p class="hint" style="margin: 0 0 0.5rem;">
-                {{ l.numero_capi_attuale }} capi · {{ l.eta_mesi_attuale }} mesi ({{ l.classe_eta }})
-                · {{ 'Incubazione' if l.incubazione_id else 'Acquisto' }} · dal {{ l.data_ingresso }}
-            </p>
-            <div class="incubazione-azioni">
-                <a class="button-link button-link-secondary" href="{{ url_for('pulcinaia_uscita', pulcini_id=l.id) }}">Registra uscita</a>
-            </div>
-        </div>
-        {% endfor %}
-        {% else %}
-        <p class="hint">Nessun pulcino in pulcinaia.</p>
-        {% endif %}
     </div>
     {% endfor %}
 </div>
+
+{% call macros.modal("modal-entrata", "Nuovo ingresso in pulcinaia", url_for('pulcinaia_nuova')) %}
+    <label>Tipo
+        <select name="evento" id="entrata-evento" required>
+            <option value="entrata">Entrata (da incubatrice)</option>
+            <option value="acquisto">Acquisto esterno</option>
+        </select>
+    </label>
+    <label>Razza
+        <select name="razza_id" id="entrata-razza" required>
+            {% for r in razze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}
+        </select>
+    </label>
+    <p class="hint" id="uova-in-attesa-hint" style="margin: 0;"></p>
+    <label>Numero pulcini
+        <input type="number" name="numero_capi" id="entrata-numero" value="1" min="1" required>
+    </label>
+    <label>Data di nascita
+        <input type="date" name="data_nascita" max="{{ oggi_iso }}" required>
+    </label>
+    <label id="entrata-prezzo-label">Prezzo acquisto totale (€)
+        <input type="number" name="prezzo_acquisto" step="0.01" min="0">
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+
+{% call macros.modal("modal-perdita", "Perdita in Pulcinaia", url_for('pulcinaia_uscita')) %}
+    <input type="hidden" name="tipo" value="perdita">
+    <input type="hidden" name="razza_id" id="perdita-razza-id">
+    <input type="hidden" name="data_nascita" id="perdita-data-nascita">
+    <label>Gruppo
+        <select id="perdita-gruppo" required>
+            {% for l in gruppi_pulcinaia %}
+            <option value="{{ l.razza_id }}|{{ l.data_nascita }}" data-max="{{ l.numero_capi_attuale }}">
+                {{ l.razza_nome }} · nati il {{ l.data_nascita }} · {{ l.numero_capi_attuale }} disponibili
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Numero pulcini
+        <input type="number" name="numero_capi" id="perdita-numero" value="1" min="1" required>
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+
+{% call macros.modal("modal-vendita", "Vendita da Pulcinaia", url_for('pulcinaia_uscita')) %}
+    <input type="hidden" name="tipo" value="vendita">
+    <input type="hidden" name="razza_id" id="vendita-razza-id">
+    <input type="hidden" name="data_nascita" id="vendita-data-nascita">
+    <label>Gruppo
+        <select id="vendita-gruppo" required>
+            {% for l in gruppi_pulcinaia %}
+            <option value="{{ l.razza_id }}|{{ l.data_nascita }}" data-max="{{ l.numero_capi_attuale }}">
+                {{ l.razza_nome }} · nati il {{ l.data_nascita }} · {{ l.numero_capi_attuale }} disponibili
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Numero pulcini
+        <input type="number" name="numero_capi" id="vendita-numero" value="1" min="1" required>
+    </label>
+    <label>Prezzo di vendita totale (€)
+        <input type="number" name="prezzo_vendita" id="vendita-prezzo" step="0.01" min="0">
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+
+<script>
+    const uovaInAttesaPerRazza = {{ uova_in_attesa_per_razza|tojson }};
+
+    (function () {
+        const evento = document.getElementById("entrata-evento");
+        const razzaSelect = document.getElementById("entrata-razza");
+        const numeroCapi = document.getElementById("entrata-numero");
+        const uovaHint = document.getElementById("uova-in-attesa-hint");
+        const prezzoLabel = document.getElementById("entrata-prezzo-label");
+
+        function aggiorna() {
+            const entrata = evento.value === "entrata";
+            prezzoLabel.style.display = entrata ? "none" : "";
+            if (entrata) {
+                const disponibili = uovaInAttesaPerRazza[razzaSelect.value] || 0;
+                numeroCapi.max = disponibili;
+                uovaHint.textContent = disponibili + " uova in attesa per questa razza in incubatrice";
+                uovaHint.style.display = "";
+            } else {
+                numeroCapi.removeAttribute("max");
+                uovaHint.style.display = "none";
+            }
+        }
+        evento.addEventListener("change", aggiorna);
+        razzaSelect.addEventListener("change", aggiorna);
+        aggiorna();
+    })();
+
+    function initModaleUscitaPulcinaia(prefix) {
+        const gruppo = document.getElementById(prefix + "-gruppo");
+        const numero = document.getElementById(prefix + "-numero");
+        if (!gruppo) return;
+        const razzaId = document.getElementById(prefix + "-razza-id");
+        const dataNascita = document.getElementById(prefix + "-data-nascita");
+
+        function aggiorna() {
+            const opzione = gruppo.selectedOptions[0];
+            if (!opzione) return;
+            const [rid, dn] = opzione.value.split("|");
+            razzaId.value = rid;
+            dataNascita.value = dn;
+            numero.max = opzione.dataset.max;
+        }
+
+        gruppo.addEventListener("change", aggiorna);
+        aggiorna();
+    }
+
+    initModaleUscitaPulcinaia("perdita");
+    initModaleUscitaPulcinaia("vendita");
+
+    (function () {
+        const griglia = document.querySelector(".box-grid");
+        const sliderColonne = document.getElementById("colonne-slider");
+        const valoreColonne = document.getElementById("colonne-valore");
+        const selectOrdine = document.getElementById("ordine-select");
+        if (!griglia || !sliderColonne || !selectOrdine) return;
+
+        function aggiornaColonne() {
+            griglia.style.setProperty("--colonne", sliderColonne.value);
+            valoreColonne.textContent = sliderColonne.value;
+        }
+
+        function aggiornaOrdine() {
+            const schede = Array.from(griglia.children).filter(el => el.classList.contains("card"));
+            const criterio = selectOrdine.value;
+            schede.sort((a, b) => {
+                if (criterio === "numero-desc") return b.dataset.totale - a.dataset.totale;
+                if (criterio === "numero-asc") return a.dataset.totale - b.dataset.totale;
+                if (criterio === "alfa-desc") return b.dataset.nome.localeCompare(a.dataset.nome, "it");
+                return a.dataset.nome.localeCompare(b.dataset.nome, "it"); // alfa-asc
+            });
+            schede.forEach(el => griglia.appendChild(el));
+        }
+
+        sliderColonne.addEventListener("input", aggiornaColonne);
+        selectOrdine.addEventListener("change", aggiornaOrdine);
+        aggiornaColonne();
+    })();
+</script>
 {% endblock %}

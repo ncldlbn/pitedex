@@ -40,7 +40,7 @@
     </form>
 </div>
 
-<p class="hint" style="margin: 1rem 0;">{{ risultati|length }} lotti trovati · {{ totale_capi }} capi totali</p>
+<p class="hint" style="margin: 1rem 0;">{{ risultati|length }} gruppi trovati · {{ totale_capi }} capi totali</p>
 
 <div class="card">
     <div class="matrice-scroll">
@@ -53,8 +53,6 @@
                     <th>Classe</th>
                     <th>Destinazione</th>
                     <th>N. capi</th>
-                    <th>Data ingresso</th>
-                    <th>Prezzo acquisto</th>
                 </tr>
             </thead>
             <tbody>
@@ -66,11 +64,9 @@
                     <td>{{ l.classe_eta }}</td>
                     <td><span class="badge">{{ destinazioni[l.destinazione] }}</span></td>
                     <td class="num">{{ l.numero_capi_attuale }}</td>
-                    <td>{{ l.data_ingresso }}</td>
-                    <td class="num">{{ '%.2f'|format(l.prezzo_acquisto_totale) if l.prezzo_acquisto_totale is not none else '–' }}</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="8" class="empty">Nessun lotto corrisponde ai filtri.</td></tr>
+                <tr><td colspan="6" class="empty">Nessun gruppo corrisponde ai filtri.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -61,6 +61,12 @@ body {
     font-size: 1.5rem;
 }
 
+.navbar-title-img {
+    height: 48px;
+    width: auto;
+    display: block;
+}
+
 .navbar-date {
     color: var(--text-muted);
     font-size: 0.9rem;
@@ -84,6 +90,12 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+}
+
+.nav-separator {
+    height: 1px;
+    margin: 0.5rem 0.9rem;
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .nav-link {
@@ -137,54 +149,11 @@ body {
     margin: 0 0 0.9rem;
 }
 
-/* Filter chips */
+/* Grid a card (Incubazione, Pulcinaia) */
 
-.filter-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1.25rem;
-}
-
-.chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.4rem 0.85rem;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--bg-surface);
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.chip:hover {
-    background: var(--bg-page);
-}
-
-.chip.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--text-on-dark);
-}
-
-.chip-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-    flex-shrink: 0;
-}
-
-/* Piramide età/sesso */
-
-.piramide-grid,
 .box-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(var(--colonne, 3), 1fr);
     gap: 1rem;
 }
 
@@ -198,13 +167,32 @@ body {
     padding-top: 0;
 }
 
+.sesso-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 0 0 0.5rem;
+}
+
+.sesso-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.sesso-totale {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+}
+
 .incubazione-azioni {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
 }
 
-.piramide-header {
+.card-header {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
@@ -217,84 +205,83 @@ body {
     font-size: 1.05rem;
 }
 
+a.razza-name {
+    color: inherit;
+    text-decoration: none;
+}
+
+a.razza-name:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
 .razza-total {
     font-size: 0.82rem;
     color: var(--text-muted);
 }
 
-.piramide-righe {
+/* Grafico a barre orizzontali (Pollaio) */
+
+.barre-orizzontali {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 2px;
 }
 
-.piramide-riga {
+.barra-riga {
     display: grid;
-    grid-template-columns: 1fr 70px 1fr;
+    grid-template-columns: 160px 1fr 48px;
     align-items: center;
-    gap: 0.5rem;
-    transition: opacity 0.15s ease;
+    gap: 0.75rem;
+    padding: 0.35rem 0.5rem;
+    margin: 0 -0.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s ease;
 }
 
-.piramide-riga-attenuata {
-    opacity: 0.4;
+.barra-riga:hover,
+.barra-riga:focus-visible {
+    background: var(--bg-page);
 }
 
-.piramide-lato {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    height: 14px;
+.barra-etichetta {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.piramide-m {
-    justify-content: flex-end;
+.barra-traccia {
+    height: 20px;
+    background: var(--bg-page);
+    border-radius: 4px;
+    overflow: hidden;
 }
 
-.piramide-f {
-    justify-content: flex-start;
-}
-
-.piramide-barra {
+.barra-riempimento {
+    display: block;
     height: 100%;
-    border-radius: 3px;
-    min-width: 2px;
+    min-width: 3px;
+    border-radius: 0 4px 4px 0;
+    background: var(--accent);
 }
 
-.piramide-barra-m {
-    background: #1864ab;
-}
-
-.piramide-barra-f {
-    background: #c2255c;
-}
-
-.piramide-valore {
-    font-size: 0.78rem;
+.barra-valore {
+    font-size: 0.85rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-
-.piramide-etichetta {
-    font-size: 0.78rem;
+    text-align: right;
     color: var(--text-secondary);
-    text-align: center;
-    white-space: nowrap;
 }
 
 /* Tabelle scrollabili (Query, Pulcinaia, Incubazione) */
 
 .matrice-scroll {
     overflow-x: auto;
-}
-
-.testo-f {
-    color: #c2255c;
-}
-
-.testo-m {
-    color: #1864ab;
 }
 
 /* Card */
@@ -470,6 +457,109 @@ button:hover {
     margin: 0 0 1.5rem;
 }
 
+/* Modali (popup di inserimento) */
+
+.azioni-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 1.5rem;
+}
+
+.azioni-bar-gruppo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.controlli-vista {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.controlli-vista label {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.controlli-vista input[type="range"] {
+    width: 100px;
+    padding: 0;
+    border: none;
+    background: none;
+    accent-color: var(--accent);
+}
+
+.controlli-vista select {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+#colonne-valore {
+    font-variant-numeric: tabular-nums;
+    min-width: 1ch;
+}
+
+dialog.modal {
+    width: min(460px, calc(100vw - 2.5rem));
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+dialog.modal::backdrop {
+    background: rgba(36, 35, 31, 0.45);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.25rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.1rem;
+}
+
+.modal-header h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.15rem;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 0.2rem 0.4rem;
+    width: auto;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    background: var(--bg-page);
+    color: var(--text-primary);
+}
+
+dialog.modal form {
+    padding: 0 1.25rem 1.25rem;
+}
+
 /* Responsive */
 
 @media (max-width: 720px) {
@@ -485,6 +575,13 @@ button:hover {
     .sidebar nav {
         flex-direction: row;
         overflow-x: auto;
+    }
+
+    .nav-separator {
+        width: 1px;
+        height: auto;
+        margin: 0.25rem 0.4rem;
+        flex-shrink: 0;
     }
 
     .content {

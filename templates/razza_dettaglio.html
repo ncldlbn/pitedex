@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<p style="margin: 0 0 1.25rem;">
+    <a class="button-link button-link-secondary" href="{{ url_for('index') }}">← Torna a Pollaio</a>
+</p>
+<h1 class="page-title">{{ razza.nome }}</h1>
+<p class="hint">Altre statistiche in arrivo.</p>
+{% endblock %}

@@ -15,25 +15,19 @@ DESTINAZIONI = {
 }
 
 TIPI_USCITA_PULCINAIA = {
-    "promozione": "Promozione a Pollaio",
     "vendita": "Vendita",
-    "morte": "Morte",
+    "perdita": "Perdita",
+}
+# La promozione a Pollaio si registra da Pollaio -> Entrata (lato che riceve),
+# stesso pattern del trasferimento Incubatrice -> Pulcinaia.
+
+TIPI_USCITA_POLLAIO = {
+    "vendita": "Vendita",
+    "macellazione": "Macellazione",
+    "perdita": "Perdita",
 }
 
 CLASSI_ETA = ["Pulcino", "Pollastro", "Produttivo", "Pensionato"]
-
-# il Pollaio contiene solo pollastri e adulti (i pulcini vivono in Pulcinaia):
-# le viste sul Pollaio non devono contarli, anche se per qualche motivo
-# un lotto risultasse ancora classificato "Pulcino" (es. promozione precoce)
-CLASSI_ETA_POLLAIO = [c for c in CLASSI_ETA if c != "Pulcino"]
-
-# colori per i chip del filtro destinazione (palette validata contro il daltonismo)
-DESTINAZIONE_COLORI = {
-    "riproduzione": "#4a3aa7",
-    "uova": "#1baf7a",
-    "carne": "#eb6834",
-    "rivendita": "#2a78d6",
-}
 
 # Soglie di partenza da letteratura avicola generica (Bell & Weaver, NRC) —
 # da correggere nella scheda "Razze" in base all'esperienza diretta.
@@ -70,20 +64,11 @@ def close_db(exception=None):
         db.close()
 
 
-def _colonna_esiste(db, tabella, colonna):
-    righe = db.execute(f"PRAGMA table_info({tabella})").fetchall()
-    return any(r[1] == colonna for r in righe)
-
-
 def init_db():
-    """Crea lo schema se manca e applica le migrazioni additive mancanti.
-    Idempotente: gira ad ogni avvio dell'app, anche su un DB già popolato,
-    senza mai cancellare dati esistenti."""
+    """Crea lo schema se manca. Idempotente: gira ad ogni avvio dell'app,
+    anche su un DB già popolato, senza mai cancellare dati esistenti."""
     db = sqlite3.connect(DB_PATH)
     db.executescript(SCHEMA_PATH.read_text())
-
-    if not _colonna_esiste(db, "lotti", "pulcini_id"):
-        db.execute("ALTER TABLE lotti ADD COLUMN pulcini_id INTEGER REFERENCES pulcini(id)")
 
     if db.execute("SELECT COUNT(*) FROM razze").fetchone()[0] == 0:
         db.executemany(
@@ -115,31 +100,70 @@ def classe_eta(eta_mesi, razza):
     return "Pensionato"
 
 
-def lotti_disponibili(db, razza_id=None, sesso=None, destinazione=None, classe_eta_filtro=None):
-    condizioni = ["lotti.numero_capi_attuale > 0"]
+def data_nascita_approssimata(anno_nascita):
+    """anno_nascita (Pollaio) -> data approssimata (convenzione: metà anno),
+    per riusare eta_in_mesi()/classe_eta() che lavorano su una data esatta."""
+    return f"{anno_nascita}-07-01"
+
+
+def pollaio_disponibili(db, razza_id=None, sesso=None, destinazione=None,
+                         classe_eta_filtro=None, anno_nascita=None, data_riferimento=None):
+    """Pool di pollaio in stock (numero_capi_attuale > 0) a una data di
+    riferimento, un gruppo per combinazione di caratteristiche (razza, sesso,
+    anno_nascita, destinazione) — niente identità di lotto: due capi con le
+    stesse caratteristiche sono fungibili e confluiscono nello stesso gruppo.
+    Niente pollaio/recinto: ogni razza vive già in un pollaio fisico
+    distinto, quindi la razza stessa lo identifica implicitamente.
+
+    `data_riferimento` (None = stato attuale, tutti gli eventi) ricostruisce
+    lo stato a una data storica per somma cumulata degli eventi fino a quel
+    momento — stessa funzione, stesso calcolo, usata sia per "oggi" sia per
+    una data passata: niente percorso di codice separato per lo storico."""
+    condizioni = []
     parametri = []
     if razza_id:
-        condizioni.append("lotti.razza_id = ?")
+        condizioni.append("s.razza_id = ?")
         parametri.append(razza_id)
     if sesso:
-        condizioni.append("lotti.sesso = ?")
+        condizioni.append("s.sesso = ?")
         parametri.append(sesso)
     if destinazione:
-        condizioni.append("lotti.destinazione = ?")
+        condizioni.append("s.destinazione = ?")
         parametri.append(destinazione)
+    if anno_nascita:
+        condizioni.append("s.anno_nascita = ?")
+        parametri.append(anno_nascita)
+    filtro = f"AND {' AND '.join(condizioni)}" if condizioni else ""
+
+    filtro_data = "WHERE data <= ?" if data_riferimento else ""
+    parametri_data = [data_riferimento] if data_riferimento else []
 
     righe = db.execute(
-        f"""SELECT lotti.*, razze.nome AS razza_nome,
-                   razze.eta_pollastro_mesi, razze.eta_produttivo_mesi, razze.eta_pensionato_mesi
-            FROM lotti JOIN razze ON razze.id = lotti.razza_id
-            WHERE {' AND '.join(condizioni)}
-            ORDER BY lotti.data_ingresso DESC""",
-        parametri,
+        f"""
+        SELECT s.razza_id, razze.nome AS razza_nome,
+               s.sesso, s.anno_nascita, s.destinazione, s.numero_capi_attuale,
+               razze.eta_pollastro_mesi, razze.eta_produttivo_mesi, razze.eta_pensionato_mesi
+        FROM (
+          SELECT razza_id, sesso, anno_nascita, destinazione,
+                 SUM(CASE
+                       WHEN evento IN ('acquisto','promozione','cambio_destinazione_entrata') THEN numero_capi
+                       WHEN evento IN ('vendita','perdita','macellazione','cambio_destinazione_uscita') THEN -numero_capi
+                     END) AS numero_capi_attuale
+          FROM eventi_pollaio
+          {filtro_data}
+          GROUP BY razza_id, sesso, anno_nascita, destinazione
+        ) s
+        JOIN razze ON razze.id = s.razza_id
+        WHERE s.numero_capi_attuale > 0 {filtro}
+        ORDER BY s.numero_capi_attuale DESC
+        """,
+        parametri_data + parametri,
     ).fetchall()
 
     risultato = []
     for r in righe:
-        eta_mesi = eta_in_mesi(r["data_nascita"])
+        data_nascita = data_nascita_approssimata(r["anno_nascita"])
+        eta_mesi = eta_in_mesi(data_nascita)
         classe = classe_eta(eta_mesi, r)
         if classe_eta_filtro and classe != classe_eta_filtro:
             continue
@@ -147,14 +171,44 @@ def lotti_disponibili(db, razza_id=None, sesso=None, destinazione=None, classe_e
     return risultato
 
 
-def pulcini_disponibili(db):
+def _pollaio_pool(db, razza_id, sesso, anno_nascita, destinazione):
+    righe = pollaio_disponibili(
+        db, razza_id=razza_id, sesso=sesso, anno_nascita=anno_nascita, destinazione=destinazione,
+    )
+    return righe[0] if righe else None
+
+
+def pulcinaia_disponibili(db, razza_id=None, data_nascita=None):
+    """Pool di pulcinaia tuttora in stock (numero_capi_attuale > 0), un
+    gruppo per (razza, data_nascita)."""
+    condizioni = []
+    parametri = []
+    if razza_id:
+        condizioni.append("s.razza_id = ?")
+        parametri.append(razza_id)
+    if data_nascita:
+        condizioni.append("s.data_nascita = ?")
+        parametri.append(data_nascita)
+    filtro = f"AND {' AND '.join(condizioni)}" if condizioni else ""
+
     righe = db.execute(
-        """SELECT pulcini.*, razze.nome AS razza_nome,
-                  razze.eta_pollastro_mesi, razze.eta_produttivo_mesi, razze.eta_pensionato_mesi
-           FROM pulcini JOIN razze ON razze.id = pulcini.razza_id
-           WHERE pulcini.numero_capi_attuale > 0
-           ORDER BY pulcini.data_ingresso DESC"""
+        f"""
+        SELECT s.razza_id, razze.nome AS razza_nome, s.data_nascita, s.numero_capi_attuale,
+               razze.eta_pollastro_mesi, razze.eta_produttivo_mesi, razze.eta_pensionato_mesi
+        FROM (
+          SELECT razza_id, data_nascita,
+                 SUM(CASE WHEN evento IN ('entrata','acquisto') THEN numero_capi ELSE -numero_capi END)
+                   AS numero_capi_attuale
+          FROM eventi_pulcinaia
+          GROUP BY razza_id, data_nascita
+        ) s
+        JOIN razze ON razze.id = s.razza_id
+        WHERE s.numero_capi_attuale > 0 {filtro}
+        ORDER BY s.data_nascita DESC
+        """,
+        parametri,
     ).fetchall()
+
     risultato = []
     for r in righe:
         eta_mesi = eta_in_mesi(r["data_nascita"])
@@ -162,11 +216,16 @@ def pulcini_disponibili(db):
     return risultato
 
 
+def _pulcinaia_pool(db, razza_id, data_nascita):
+    righe = pulcinaia_disponibili(db, razza_id=razza_id, data_nascita=data_nascita)
+    return righe[0] if righe else None
+
+
 def pulcini_per_razza(db):
     """Un box per razza (tutte, anche senza pulcini attivi), con l'elenco
     dei lotti in pulcinaia per quella razza."""
     razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
-    lotti = pulcini_disponibili(db)
+    lotti = pulcinaia_disponibili(db)
 
     lotti_per_razza = {}
     for l in lotti:
@@ -185,380 +244,293 @@ def pulcini_per_razza(db):
     return gruppi
 
 
-def _cella_vuota():
-    return {"F": 0, "M": 0, "totale": 0}
+SESSO_LABEL = {"F": "Femmine", "M": "Maschi"}
 
 
-def matrice_composizione(lotti, colonne=None):
-    colonne = colonne or CLASSI_ETA
-    celle = {}
-    totali_razza = {}
-    totali_classe = {c: _cella_vuota() for c in colonne}
-    totale_generale = _cella_vuota()
+def pollaio_composizione_per_razza(db):
+    """Una card per razza (solo quelle con capi presenti): totale, e per
+    ciascun sesso la distribuzione sia per destinazione d'uso sia per anno di
+    nascita (due viste alternative, entrambe calcolate — il toggle fra le due
+    è lato client) — percento scalata sul valore massimo di *tutte* le barre
+    dello stesso tipo in tutto il pollaio, così le lunghezze restano
+    confrontabili fra razze/sessi diversi."""
+    righe = pollaio_disponibili(db)
 
-    for l in lotti:
-        razza = l["razza_nome"]
-        classe = l["classe_eta"]
-        if classe not in totali_classe:
-            continue
-        sesso = l["sesso"]
-        n = l["numero_capi_attuale"]
+    per_razza = {}       # razza_nome -> sesso -> destinazione -> capi
+    per_razza_anno = {}  # razza_nome -> sesso -> anno_nascita -> capi
+    razza_id_per_nome = {}
+    for r in righe:
+        per_sesso = per_razza.setdefault(r["razza_nome"], {})
+        per_dest = per_sesso.setdefault(r["sesso"], {})
+        per_dest[r["destinazione"]] = per_dest.get(r["destinazione"], 0) + r["numero_capi_attuale"]
 
-        cella = celle.setdefault((razza, classe), _cella_vuota())
-        cella[sesso] += n
-        cella["totale"] += n
+        per_sesso_anno = per_razza_anno.setdefault(r["razza_nome"], {})
+        per_anno = per_sesso_anno.setdefault(r["sesso"], {})
+        per_anno[r["anno_nascita"]] = per_anno.get(r["anno_nascita"], 0) + r["numero_capi_attuale"]
 
-        totali_razza.setdefault(razza, _cella_vuota())
-        totali_razza[razza][sesso] += n
-        totali_razza[razza]["totale"] += n
+        razza_id_per_nome[r["razza_nome"]] = r["razza_id"]
 
-        totali_classe[classe][sesso] += n
-        totali_classe[classe]["totale"] += n
-
-        totale_generale[sesso] += n
-        totale_generale["totale"] += n
-
-    razze_ordinate = sorted(totali_razza.keys(), key=lambda r: -totali_razza[r]["totale"])
-
-    righe = []
-    for razza in razze_ordinate:
-        riga_celle = [celle.get((razza, classe), _cella_vuota()) for classe in colonne]
-        righe.append({"razza": razza, "totale": totali_razza[razza], "celle": riga_celle})
-
-    return {
-        "colonne": colonne,
-        "righe": righe,
-        "colonne_totali": [totali_classe[c] for c in colonne],
-        "totale_generale": totale_generale,
-    }
-
-
-def _lotti_per_destinazione_filtrata(db):
-    """Legge ?destinazione= dalla query string e restituisce (lotti filtrati,
-    valore del filtro) — condiviso fra la vista tabella e quella grafica, che
-    mostrano la stessa composizione filtrata in due formati diversi."""
-    lotti = lotti_disponibili(db)
-    destinazione_filtro = request.args.get("destinazione", "tutte")
-    if destinazione_filtro not in DESTINAZIONI:
-        destinazione_filtro = "tutte"
-    lotti_filtrati = (
-        lotti
-        if destinazione_filtro == "tutte"
-        else [l for l in lotti if l["destinazione"] == destinazione_filtro]
+    massimo_dest = max(
+        (c for ps in per_razza.values() for pd in ps.values() for c in pd.values()),
+        default=0,
     )
-    return lotti_filtrati, destinazione_filtro
 
+    # ultimi 4 anni rispetto a oggi (finestra fissa, non dipendente dai dati):
+    # stesso principio delle destinazioni — righe uniformi fra schede diverse.
+    anno_corrente = date.today().year
+    ultimi_4_anni = [anno_corrente - i for i in range(3, -1, -1)]
 
-def grafico_piramide(matrice):
-    """Trasforma la matrice razza x classe_eta in barre F/M pronte per il
-    rendering a piramide, scalate sul valore massimo di cella dell'intera
-    pagina così che le lunghezze restino confrontabili fra razze diverse."""
-    max_cella = max((c["totale"] for riga in matrice["righe"] for c in riga["celle"]), default=0)
+    massimo_anno = max(
+        (ps.get(sesso, {}).get(anno, 0)
+         for ps in per_razza_anno.values()
+         for sesso in ("F", "M")
+         for anno in ultimi_4_anni),
+        default=0,
+    )
 
-    razze = []
-    for riga in matrice["righe"]:
-        classi = []
-        for classe, cella in zip(matrice["colonne"], riga["celle"]):
-            classi.append(
+    gruppi = []
+    for razza_nome in sorted(per_razza):
+        dati_sesso = per_razza[razza_nome]
+        dati_sesso_anno = per_razza_anno.get(razza_nome, {})
+        totale_razza = sum(sum(d.values()) for d in dati_sesso.values())
+        sessi = []
+        for sesso_key in ("F", "M"):
+            # sempre entrambi i sessi (anche senza capi: tutte le barre a zero)
+            per_dest = dati_sesso.get(sesso_key, {})
+            per_anno = dati_sesso_anno.get(sesso_key, {})
+
+            # tutte le destinazioni, anche a zero, per mantenere le stesse righe
+            # fra schede diverse — "uova" non ha senso pei maschi
+            destinazioni_sesso = [d for d in DESTINAZIONI if not (sesso_key == "M" and d == "uova")]
+            barre_destinazione = [
                 {
-                    "classe": classe,
-                    "F": cella["F"],
-                    "M": cella["M"],
-                    "percento_f": (cella["F"] / max_cella * 100) if max_cella else 0,
-                    "percento_m": (cella["M"] / max_cella * 100) if max_cella else 0,
+                    "etichetta": DESTINAZIONI[dest],
+                    "totale": per_dest.get(dest, 0),
+                    "percento": (per_dest.get(dest, 0) / massimo_dest * 100) if massimo_dest else 0,
                 }
-            )
-        razze.append({"razza": riga["razza"], "totale": riga["totale"]["totale"], "classi": classi})
-    return razze
+                for dest in destinazioni_sesso
+            ]
+            # ultimi 4 anni fissi, anche a zero (barra vuota) se non ci sono capi
+            # nati in quell'anno, per la stessa ragione delle destinazioni
+            barre_anno = [
+                {
+                    "etichetta": str(anno),
+                    "totale": per_anno.get(anno, 0),
+                    "percento": (per_anno.get(anno, 0) / massimo_anno * 100) if massimo_anno else 0,
+                }
+                for anno in ultimi_4_anni
+            ]
+
+            sessi.append({
+                "label": SESSO_LABEL[sesso_key],
+                "totale": sum(per_dest.values()),
+                "barre_destinazione": barre_destinazione,
+                "barre_anno": barre_anno,
+            })
+        gruppi.append({
+            "nome": razza_nome, "razza_id": razza_id_per_nome[razza_nome],
+            "totale": totale_razza, "sessi": sessi,
+        })
+    return gruppi
 
 
-def incubazione_kpi(inc):
-    """Metriche derivate di un'incubazione. Restano None finché la schiusa
-    non è registrata: prima di allora non si sa quante uova erano fertili."""
-    impostate = inc["uova_impostate"]
-    infertili = inc["uova_infertili"] or 0
-    nati = inc["pulcini_nati"]
-    schiusa_registrata = inc["data_schiusa"] is not None
-
-    if not schiusa_registrata:
-        return {
-            "schiusa_registrata": False,
-            "morte_incubazione": None,
-            "efficienza_schiusa": None,
-            "mortalita_embrionale": None,
-            "pulcini_da_promuovere": 0,
-        }
-
-    fertili = impostate - infertili
-    morte_incubazione = fertili - nati
-    return {
-        "schiusa_registrata": True,
-        "morte_incubazione": morte_incubazione,
-        "efficienza_schiusa": (nati / impostate * 100) if impostate else 0,
-        "mortalita_embrionale": (morte_incubazione / fertili * 100) if fertili else 0,
-        "pulcini_da_promuovere": nati - inc["pulcini_promossi"],
-    }
+@app.route("/pollaio/razza/<int:razza_id>")
+def pollaio_razza_dettaglio(razza_id):
+    db = get_db()
+    razza = db.execute("SELECT * FROM razze WHERE id = ?", (razza_id,)).fetchone()
+    return render_template("razza_dettaglio.html", razza=razza)
 
 
 @app.route("/")
 def index():
     db = get_db()
-    lotti_filtrati, destinazione_filtro = _lotti_per_destinazione_filtrata(db)
-    matrice = matrice_composizione(lotti_filtrati, colonne=CLASSI_ETA_POLLAIO)
+    elenco_razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+
     return render_template(
         "index.html",
-        razze=grafico_piramide(matrice),
+        elenco_razze=elenco_razze,
         destinazioni=DESTINAZIONI,
-        colori_destinazione=DESTINAZIONE_COLORI,
-        destinazione_filtro=destinazione_filtro,
+        composizione_razze=pollaio_composizione_per_razza(db),
+        gruppi_pollaio=pollaio_disponibili(db),
+        gruppi_pulcinaia=pulcinaia_disponibili(db),
     )
 
 
-def _incubazione_con_razza(db, incubazione_id):
-    return db.execute(
-        """SELECT incubazioni.*, razze.nome AS razza_nome
-           FROM incubazioni JOIN razze ON razze.id = incubazioni.razza_id
-           WHERE incubazioni.id = ?""",
-        (incubazione_id,),
-    ).fetchone()
+def eventi_incubatrice_per_razza(db, razza_id=None):
+    """Pool di incubatrice per razza (niente sotto-raggruppamento: le uova
+    della stessa razza sono fungibili). uova_in_attesa = quante restano
+    ancora da risolvere (né perse né trasferite in pulcinaia)."""
+    condizioni = []
+    parametri = []
+    if razza_id:
+        condizioni.append("razza_id = ?")
+        parametri.append(razza_id)
+    filtro = f"WHERE {' AND '.join(condizioni)}" if condizioni else ""
+
+    righe = db.execute(
+        f"""
+        SELECT razza_id,
+          SUM(CASE WHEN evento IN ('entrata','acquisto') THEN numero_uova ELSE 0 END) AS uova_impostate,
+          SUM(CASE WHEN evento = 'perdita' THEN numero_uova ELSE 0 END) AS uova_perdute,
+          SUM(CASE WHEN evento = 'trasferimento' THEN numero_uova ELSE 0 END) AS uova_trasferite
+        FROM eventi_incubatrice
+        {filtro}
+        GROUP BY razza_id
+        """,
+        parametri,
+    ).fetchall()
+
+    risultato = []
+    for r in righe:
+        d = dict(r)
+        d["uova_in_attesa"] = d["uova_impostate"] - d["uova_perdute"] - d["uova_trasferite"]
+        d["tasso_trasferimento"] = (d["uova_trasferite"] / d["uova_impostate"] * 100) if d["uova_impostate"] else 0
+        risultato.append(d)
+    return risultato
+
+
+def _incubatrice_pool_razza(db, razza_id):
+    righe = eventi_incubatrice_per_razza(db, razza_id=razza_id)
+    return righe[0] if righe else {"razza_id": razza_id, "uova_impostate": 0, "uova_perdute": 0,
+                                    "uova_trasferite": 0, "uova_in_attesa": 0, "tasso_trasferimento": 0}
 
 
 def incubazioni_per_razza(db):
-    """Un box per razza (tutte, anche senza incubazioni attive): quante uova
-    sta covando in questo momento, più l'elenco dei lotti ancora da seguire
-    (non ancora schiusi, o schiusi ma con pulcini non ancora promossi)."""
+    """Un pool per razza (tutte, anche senza movimenti)."""
     razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
-    righe = db.execute(
-        """SELECT incubazioni.*, razze.nome AS razza_nome
-           FROM incubazioni JOIN razze ON razze.id = incubazioni.razza_id
-           ORDER BY incubazioni.data_inizio DESC"""
-    ).fetchall()
-
-    batch_per_razza = {}
-    for r in righe:
-        batch_per_razza.setdefault(r["razza_nome"], []).append(r)
+    pool_per_razza = {p["razza_id"]: p for p in eventi_incubatrice_per_razza(db)}
 
     gruppi = []
     for razza in razze:
-        batch_razza = batch_per_razza.get(razza["nome"], [])
-        uova_in_incubazione = sum(b["uova_impostate"] for b in batch_razza if b["data_schiusa"] is None)
-
-        batch_attivi = []
-        for b in batch_razza:
-            kpi = incubazione_kpi(b)
-            if not kpi["schiusa_registrata"] or kpi["pulcini_da_promuovere"] > 0:
-                batch_attivi.append({**dict(b), **kpi})
-
-        gruppi.append(
-            {
-                "razza": razza["nome"],
-                "uova_in_incubazione": uova_in_incubazione,
-                "batch": batch_attivi,
-            }
-        )
+        pool = pool_per_razza.get(razza["id"])
+        base = {"razza_id": razza["id"], "razza": razza["nome"], "uova_impostate": 0, "uova_perdute": 0,
+                "uova_trasferite": 0, "uova_in_attesa": 0, "tasso_trasferimento": 0}
+        gruppi.append({**base, **(pool or {})})
     return gruppi
 
 
 @app.route("/incubazione")
 def incubazione_lista():
     db = get_db()
-    return render_template("incubazione.html", gruppi=incubazioni_per_razza(db))
+    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    return render_template("incubazione.html", gruppi=incubazioni_per_razza(db), razze=razze)
 
 
-@app.route("/incubazione/nuova", methods=["GET", "POST"])
+@app.route("/incubazione/nuova", methods=["POST"])
 def incubazione_nuova():
     db = get_db()
-    if request.method == "POST":
-        razza_id = int(request.form["razza_id"])
-        data_inizio = request.form["data_inizio"]
-        uova_impostate = int(request.form["uova_impostate"])
-        db.execute(
-            "INSERT INTO incubazioni (razza_id, data_inizio, uova_impostate) VALUES (?, ?, ?)",
-            (razza_id, data_inizio, uova_impostate),
-        )
-        db.commit()
-        flash(f"Nuova incubazione: {uova_impostate} uova")
-        return redirect(url_for("incubazione_lista"))
-    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
-    return render_template("incubazione_nuova.html", razze=razze)
+    evento = request.form["evento"]
+    razza_id = int(request.form["razza_id"])
+    data = request.form["data"]
+    numero_uova = int(request.form["numero_uova"])
+    prezzo_acquisto = request.form.get("prezzo_acquisto") or None if evento == "acquisto" else None
+    db.execute(
+        """INSERT INTO eventi_incubatrice (razza_id, evento, data, numero_uova, prezzo_acquisto_totale)
+           VALUES (?, ?, ?, ?, ?)""",
+        (razza_id, evento, data, numero_uova, prezzo_acquisto),
+    )
+    db.commit()
+    flash(f"Registrate {numero_uova} uova in incubatrice")
+    return redirect(url_for("incubazione_lista"))
 
 
-@app.route("/incubazione/<int:incubazione_id>/schiusa", methods=["GET", "POST"])
-def incubazione_schiusa(incubazione_id):
+@app.route("/incubazione/perdita", methods=["POST"])
+def incubazione_perdita():
     db = get_db()
-    inc = _incubazione_con_razza(db, incubazione_id)
+    razza_id = int(request.form["razza_id"])
+    pool = _incubatrice_pool_razza(db, razza_id)
+    numero_uova = int(request.form["numero_uova"] or 0)
 
-    if request.method == "POST":
-        pulcini_nati = int(request.form["pulcini_nati"])
-        data_schiusa = request.form["data_schiusa"]
-        infertili_gia_note = inc["uova_infertili"] or 0
-
-        if pulcini_nati + infertili_gia_note > inc["uova_impostate"]:
-            flash("Pulcini nati + uova già scartate non può superare le uova impostate.")
-            return redirect(url_for("incubazione_schiusa", incubazione_id=incubazione_id))
-
-        db.execute(
-            "UPDATE incubazioni SET pulcini_nati = ?, data_schiusa = ? WHERE id = ?",
-            (pulcini_nati, data_schiusa, incubazione_id),
-        )
-        db.commit()
-        flash("Schiusa registrata")
+    if numero_uova < 1 or numero_uova > pool["uova_in_attesa"]:
+        flash("Numero di uova non disponibile per la perdita.")
         return redirect(url_for("incubazione_lista"))
 
-    return render_template("incubazione_schiusa.html", incubazione=inc)
-
-
-@app.route("/incubazione/<int:incubazione_id>/scarti", methods=["GET", "POST"])
-def incubazione_scarti(incubazione_id):
-    db = get_db()
-    inc = _incubazione_con_razza(db, incubazione_id)
-
-    if request.method == "POST":
-        uova_infertili = int(request.form["uova_infertili"] or 0)
-        nati_gia_noti = inc["pulcini_nati"] or 0
-
-        if uova_infertili + nati_gia_noti > inc["uova_impostate"]:
-            flash("Uova scartate + pulcini già nati non può superare le uova impostate.")
-            return redirect(url_for("incubazione_scarti", incubazione_id=incubazione_id))
-
-        db.execute(
-            "UPDATE incubazioni SET uova_infertili = ? WHERE id = ?",
-            (uova_infertili, incubazione_id),
-        )
-        db.commit()
-        flash("Scarti registrati")
-        return redirect(url_for("incubazione_lista"))
-
-    return render_template("incubazione_scarti.html", incubazione=inc)
-
-
-@app.route("/incubazione/<int:incubazione_id>/promuovi", methods=["GET", "POST"])
-def incubazione_promuovi(incubazione_id):
-    db = get_db()
-    inc = _incubazione_con_razza(db, incubazione_id)
-    disponibili = (inc["pulcini_nati"] or 0) - inc["pulcini_promossi"]
-
-    if request.method == "POST":
-        numero_capi = int(request.form["numero_capi"] or 0)
-        if numero_capi < 1 or numero_capi > disponibili:
-            flash("Numero di pulcini non disponibile per la promozione.")
-            return redirect(url_for("incubazione_promuovi", incubazione_id=incubazione_id))
-
-        oggi = date.today().isoformat()
-        db.execute(
-            """INSERT INTO pulcini (razza_id, incubazione_id, data_nascita, data_ingresso,
-                                     numero_capi_iniziale, numero_capi_attuale)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (inc["razza_id"], incubazione_id, inc["data_schiusa"], oggi, numero_capi, numero_capi),
-        )
-        db.execute(
-            "UPDATE incubazioni SET pulcini_promossi = pulcini_promossi + ? WHERE id = ?",
-            (numero_capi, incubazione_id),
-        )
-        db.commit()
-        flash(f"Promossi {numero_capi} pulcini in Pulcinaia")
-        return redirect(url_for("incubazione_lista"))
-
-    return render_template("incubazione_promuovi.html", incubazione=inc, disponibili=disponibili)
+    oggi = date.today().isoformat()
+    db.execute(
+        "INSERT INTO eventi_incubatrice (razza_id, evento, data, numero_uova) VALUES (?, 'perdita', ?, ?)",
+        (razza_id, oggi, numero_uova),
+    )
+    db.commit()
+    flash(f"Registrata perdita di {numero_uova} uova")
+    return redirect(url_for("incubazione_lista"))
 
 
 @app.route("/pulcinaia")
 def pulcinaia_lista():
     db = get_db()
-    return render_template("pulcinaia.html", gruppi=pulcini_per_razza(db))
+    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    uova_in_attesa_per_razza = {p["razza_id"]: p["uova_in_attesa"] for p in eventi_incubatrice_per_razza(db)}
+    return render_template(
+        "pulcinaia.html", gruppi=pulcini_per_razza(db), razze=razze,
+        uova_in_attesa_per_razza=uova_in_attesa_per_razza,
+        gruppi_pulcinaia=pulcinaia_disponibili(db),
+    )
 
 
-@app.route("/pulcinaia/nuova", methods=["GET", "POST"])
+@app.route("/pulcinaia/nuova", methods=["POST"])
 def pulcinaia_nuova():
     db = get_db()
-    if request.method == "POST":
-        razza_id = int(request.form["razza_id"])
-        data_nascita = request.form["data_nascita"]
-        numero_capi = int(request.form["numero_capi"] or 1)
+    evento = request.form["evento"]
+    razza_id = int(request.form["razza_id"])
+    data_nascita = request.form["data_nascita"]
+    numero_capi = int(request.form["numero_capi"] or 1)
+    oggi = date.today().isoformat()
+
+    if evento == "entrata":
+        pool_incubatrice = _incubatrice_pool_razza(db, razza_id)
+        if numero_capi < 1 or numero_capi > pool_incubatrice["uova_in_attesa"]:
+            flash("Numero di pulcini non disponibile in incubatrice per quella razza.")
+            return redirect(url_for("pulcinaia_lista"))
+        db.execute(
+            "INSERT INTO eventi_incubatrice (razza_id, evento, data, numero_uova) VALUES (?, 'trasferimento', ?, ?)",
+            (razza_id, oggi, numero_capi),
+        )
+        db.execute(
+            """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita)
+               VALUES (?, 'entrata', ?, ?, ?)""",
+            (razza_id, oggi, numero_capi, data_nascita),
+        )
+        flash(f"Trasferiti {numero_capi} pulcini da Incubatrice a Pulcinaia")
+    else:
         prezzo_acquisto = request.form.get("prezzo_acquisto") or None
-        oggi = date.today().isoformat()
-
         db.execute(
-            """INSERT INTO pulcini (razza_id, data_nascita, data_ingresso,
-                                     prezzo_acquisto_totale, numero_capi_iniziale, numero_capi_attuale)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (razza_id, data_nascita, oggi, prezzo_acquisto, numero_capi, numero_capi),
+            """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita,
+                                               prezzo_acquisto_totale)
+               VALUES (?, 'acquisto', ?, ?, ?, ?)""",
+            (razza_id, oggi, numero_capi, data_nascita, prezzo_acquisto),
         )
-        db.commit()
         flash(f"Aggiunti {numero_capi} pulcini (acquisto esterno)")
-        return redirect(url_for("pulcinaia_lista"))
 
-    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
-    return render_template("pulcinaia_nuova.html", razze=razze)
+    db.commit()
+    return redirect(url_for("pulcinaia_lista"))
 
 
-@app.route("/pulcinaia/<int:pulcini_id>/uscita", methods=["GET", "POST"])
-def pulcinaia_uscita(pulcini_id):
+@app.route("/pulcinaia/uscita", methods=["POST"])
+def pulcinaia_uscita():
     db = get_db()
-    lotto = db.execute(
-        """SELECT pulcini.*, razze.nome AS razza_nome,
-                  razze.eta_pollastro_mesi, razze.eta_produttivo_mesi, razze.eta_pensionato_mesi
-           FROM pulcini JOIN razze ON razze.id = pulcini.razza_id
-           WHERE pulcini.id = ?""",
-        (pulcini_id,),
-    ).fetchone()
+    razza_id = int(request.form["razza_id"])
+    data_nascita = request.form["data_nascita"]
+    pool = _pulcinaia_pool(db, razza_id, data_nascita)
 
-    if request.method == "POST":
-        tipo = request.form["tipo"]
-        numero_capi = int(request.form["numero_capi"] or 1)
+    evento = request.form["tipo"]
+    numero_capi = int(request.form["numero_capi"] or 1)
 
-        if lotto is None or numero_capi < 1 or numero_capi > lotto["numero_capi_attuale"]:
-            flash("Numero di pulcini non disponibile in quel lotto.")
-            return redirect(url_for("pulcinaia_uscita", pulcini_id=pulcini_id))
-
-        oggi = date.today().isoformat()
-        prezzo_vendita = request.form.get("prezzo_vendita") or None
-        lotto_pollaio_id = None
-
-        if tipo == "promozione":
-            sesso = request.form["sesso"]
-            destinazione = request.form["destinazione"]
-            cur = db.execute(
-                """INSERT INTO lotti (razza_id, sesso, destinazione, data_nascita, data_ingresso,
-                                       numero_capi_iniziale, numero_capi_attuale, pulcini_id)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    lotto["razza_id"],
-                    sesso,
-                    destinazione,
-                    lotto["data_nascita"],
-                    oggi,
-                    numero_capi,
-                    numero_capi,
-                    pulcini_id,
-                ),
-            )
-            lotto_pollaio_id = cur.lastrowid
-            prezzo_vendita = None
-        elif tipo == "morte":
-            prezzo_vendita = None
-
-        db.execute(
-            """INSERT INTO uscite_pulcinaia (pulcini_id, tipo, data, numero_capi,
-                                              prezzo_vendita_totale, lotto_pollaio_id)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (pulcini_id, tipo, oggi, numero_capi, prezzo_vendita, lotto_pollaio_id),
-        )
-        db.execute(
-            "UPDATE pulcini SET numero_capi_attuale = numero_capi_attuale - ? WHERE id = ?",
-            (numero_capi, pulcini_id),
-        )
-        db.commit()
-        flash(f"Registrata {TIPI_USCITA_PULCINAIA[tipo].lower()}: {numero_capi} pulcini")
+    if pool is None or numero_capi < 1 or numero_capi > pool["numero_capi_attuale"]:
+        flash("Numero di pulcini non disponibile in quel gruppo.")
         return redirect(url_for("pulcinaia_lista"))
 
-    eta_mesi = eta_in_mesi(lotto["data_nascita"])
-    return render_template(
-        "pulcinaia_uscita.html",
-        lotto={**dict(lotto), "eta_mesi_attuale": eta_mesi, "classe_eta": classe_eta(eta_mesi, lotto)},
-        tipi=TIPI_USCITA_PULCINAIA,
-        destinazioni=DESTINAZIONI,
+    oggi = date.today().isoformat()
+    prezzo_vendita = request.form.get("prezzo_vendita") or None if evento == "vendita" else None
+    db.execute(
+        """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita,
+                                           prezzo_vendita_totale)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (razza_id, evento, oggi, numero_capi, data_nascita, prezzo_vendita),
     )
+
+    db.commit()
+    flash(f"Registrata {TIPI_USCITA_PULCINAIA[evento].lower()}: {numero_capi} pulcini")
+    return redirect(url_for("pulcinaia_lista"))
 
 
 @app.route("/query")
@@ -573,7 +545,7 @@ def query():
         "classe_eta": request.args.get("classe_eta", ""),
     }
 
-    risultati = lotti_disponibili(
+    risultati = pollaio_disponibili(
         db,
         razza_id=filtri["razza_id"] or None,
         sesso=filtri["sesso"] or None,
@@ -591,6 +563,217 @@ def query():
         filtri=filtri,
         totale_capi=totale_capi,
     )
+
+
+@app.route("/pollaio/nuovo", methods=["POST"])
+def pollaio_nuova():
+    db = get_db()
+    evento = request.form["evento"]
+    razza_id = int(request.form["razza_id"])
+    sesso = request.form["sesso"]
+    destinazione = request.form["destinazione"]
+    numero_capi = int(request.form["numero_capi"] or 1)
+    oggi = date.today().isoformat()
+
+    if evento == "promozione":
+        data_nascita = request.form["data_nascita"]
+        pool_pulcinaia = _pulcinaia_pool(db, razza_id, data_nascita)
+        if pool_pulcinaia is None or numero_capi < 1 or numero_capi > pool_pulcinaia["numero_capi_attuale"]:
+            flash("Numero di pulcini non disponibile in quel gruppo di Pulcinaia.")
+            return redirect(url_for("index"))
+        anno_nascita = date.fromisoformat(data_nascita).year
+
+        db.execute(
+            """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
+                                            anno_nascita, destinazione)
+               VALUES (?, 'promozione', ?, ?, ?, ?, ?)""",
+            (razza_id, oggi, numero_capi, sesso, anno_nascita, destinazione),
+        )
+        db.execute(
+            """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita)
+               VALUES (?, 'promozione', ?, ?, ?)""",
+            (razza_id, oggi, numero_capi, data_nascita),
+        )
+        flash(f"Promossi {numero_capi} capi da Pulcinaia a Pollaio")
+    else:
+        anno_nascita = int(request.form["anno_nascita"])
+        prezzo_acquisto = request.form.get("prezzo_acquisto") or None
+        db.execute(
+            """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
+                                            anno_nascita, destinazione, prezzo_acquisto_totale)
+               VALUES (?, 'acquisto', ?, ?, ?, ?, ?, ?)""",
+            (razza_id, oggi, numero_capi, sesso, anno_nascita, destinazione, prezzo_acquisto),
+        )
+        flash(f"Aggiunti {numero_capi} capi in pollaio (acquisto esterno)")
+
+    db.commit()
+    return redirect(url_for("index"))
+
+
+def _pollaio_pool_dal_form(db, form):
+    """Legge razza_id/sesso/anno_nascita/destinazione dai campi nascosti del
+    form (popolati via JS dal menu 'quale gruppo' scelto nel popup) e
+    restituisce il pool corrispondente."""
+    return _pollaio_pool(
+        db,
+        razza_id=int(form["razza_id"]),
+        sesso=form["sesso"],
+        anno_nascita=int(form["anno_nascita"]),
+        destinazione=form["destinazione"],
+    )
+
+
+@app.route("/pollaio/uscita", methods=["POST"])
+def pollaio_uscita():
+    db = get_db()
+    pool = _pollaio_pool_dal_form(db, request.form)
+
+    evento = request.form["tipo"]
+    numero_capi = int(request.form["numero_capi"] or 1)
+
+    if pool is None or numero_capi < 1 or numero_capi > pool["numero_capi_attuale"]:
+        flash("Numero di capi non disponibile in quel gruppo.")
+        return redirect(url_for("index"))
+
+    oggi = date.today().isoformat()
+    prezzo_vendita = request.form.get("prezzo_vendita") or None if evento == "vendita" else None
+
+    db.execute(
+        """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
+                                        anno_nascita, destinazione, prezzo_vendita_totale)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            pool["razza_id"], evento, oggi, numero_capi,
+            pool["sesso"], pool["anno_nascita"], pool["destinazione"], prezzo_vendita,
+        ),
+    )
+    db.commit()
+    flash(f"Registrata {TIPI_USCITA_POLLAIO[evento].lower()}: {numero_capi} capi")
+    return redirect(url_for("index"))
+
+
+@app.route("/pollaio/cambio-destinazione", methods=["POST"])
+def pollaio_cambio_destinazione():
+    db = get_db()
+    pool = _pollaio_pool_dal_form(db, request.form)
+
+    numero_capi = int(request.form["numero_capi"] or 1)
+    nuova_destinazione = request.form["nuova_destinazione"]
+
+    if pool is None or numero_capi < 1 or numero_capi > pool["numero_capi_attuale"]:
+        flash("Numero di capi non disponibile in quel gruppo.")
+        return redirect(url_for("index"))
+    if nuova_destinazione == pool["destinazione"]:
+        flash("La nuova destinazione deve essere diversa da quella attuale.")
+        return redirect(url_for("index"))
+
+    oggi = date.today().isoformat()
+    comuni = (pool["razza_id"], oggi, numero_capi, pool["sesso"], pool["anno_nascita"])
+    # riga di uscita dal pool con la vecchia destinazione
+    db.execute(
+        """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
+                                        anno_nascita, destinazione)
+           VALUES (?, 'cambio_destinazione_uscita', ?, ?, ?, ?, ?)""",
+        comuni + (pool["destinazione"],),
+    )
+    # riga di entrata nel pool con la nuova destinazione
+    db.execute(
+        """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
+                                        anno_nascita, destinazione)
+           VALUES (?, 'cambio_destinazione_entrata', ?, ?, ?, ?, ?)""",
+        comuni + (nuova_destinazione,),
+    )
+    db.commit()
+    flash(
+        f"Cambiata destinazione di {numero_capi} capi: "
+        f"{DESTINAZIONI[pool['destinazione']]} → {DESTINAZIONI[nuova_destinazione]}"
+    )
+    return redirect(url_for("index"))
+
+
+def registro_uova_per_razza(db):
+    """Giacenza di uova per razza (raccolte - vendute), incluse le razze
+    senza movimenti, più il totale complessivo."""
+    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    righe = db.execute(
+        """SELECT razza_id,
+                  SUM(CASE WHEN evento = 'raccolta' THEN numero_uova ELSE 0 END) AS raccolte,
+                  SUM(CASE WHEN evento = 'vendita' THEN numero_uova ELSE 0 END) AS vendute
+           FROM eventi_registro_uova
+           GROUP BY razza_id"""
+    ).fetchall()
+    giacenza_per_razza = {r["razza_id"]: r["raccolte"] - r["vendute"] for r in righe}
+
+    gruppi = []
+    totale_giacenza = 0
+    for razza in razze:
+        giacenza = giacenza_per_razza.get(razza["id"], 0)
+        totale_giacenza += giacenza
+        gruppi.append({"razza_id": razza["id"], "razza": razza["nome"], "giacenza": giacenza})
+    return gruppi, totale_giacenza
+
+
+def _giacenza_uova(db, razza_id):
+    riga = db.execute(
+        """SELECT
+             SUM(CASE WHEN evento = 'raccolta' THEN numero_uova ELSE 0 END)
+             - SUM(CASE WHEN evento = 'vendita' THEN numero_uova ELSE 0 END) AS giacenza
+           FROM eventi_registro_uova
+           WHERE razza_id = ?""",
+        (razza_id,),
+    ).fetchone()
+    return (riga["giacenza"] or 0) if riga and riga["giacenza"] is not None else 0
+
+
+@app.route("/registro-uova")
+def registro_uova_lista():
+    db = get_db()
+    gruppi, totale_giacenza = registro_uova_per_razza(db)
+    return render_template("registro_uova.html", gruppi=gruppi, totale_giacenza=totale_giacenza)
+
+
+@app.route("/registro-uova/raccolta", methods=["GET", "POST"])
+def registro_uova_raccolta():
+    db = get_db()
+    if request.method == "POST":
+        razza_id = int(request.form["razza_id"])
+        numero_uova = int(request.form["numero_uova"] or 1)
+        oggi = date.today().isoformat()
+        db.execute(
+            "INSERT INTO eventi_registro_uova (razza_id, evento, data, numero_uova) VALUES (?, 'raccolta', ?, ?)",
+            (razza_id, oggi, numero_uova),
+        )
+        db.commit()
+        flash(f"Raccolte {numero_uova} uova")
+        return redirect(url_for("registro_uova_lista"))
+    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    return render_template("registro_uova_raccolta.html", razze=razze)
+
+
+@app.route("/registro-uova/vendita", methods=["GET", "POST"])
+def registro_uova_vendita():
+    db = get_db()
+    if request.method == "POST":
+        razza_id = int(request.form["razza_id"])
+        numero_uova = int(request.form["numero_uova"] or 1)
+        prezzo_vendita = request.form.get("prezzo_vendita") or None
+        giacenza = _giacenza_uova(db, razza_id)
+
+        if numero_uova < 1 or numero_uova > giacenza:
+            flash("Numero di uova non disponibile in giacenza.")
+            return redirect(url_for("registro_uova_vendita"))
+
+        oggi = date.today().isoformat()
+        db.execute(
+            """INSERT INTO eventi_registro_uova (razza_id, evento, data, numero_uova, prezzo_vendita_totale)
+               VALUES (?, 'vendita', ?, ?, ?)""",
+            (razza_id, oggi, numero_uova, prezzo_vendita),
+        )
+        db.commit()
+        flash(f"Vendute {numero_uova} uova")
+        return redirect(url_for("registro_uova_lista"))
+    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    return render_template("registro_uova_vendita.html", razze=razze)
 
 
 def _numero_o_none(form, campo):
@@ -631,6 +814,16 @@ def _salva_razza(db, form, razza_id=None):
                WHERE id=?""",
             dati + (razza_id,),
         )
+
+
+@app.route("/bilancio")
+def bilancio():
+    return render_template("bilancio.html")
+
+
+@app.route("/log-attivita")
+def log_attivita():
+    return render_template("log_attivita.html")
 
 
 @app.route("/razze")

@@ -1,0 +1,25 @@
+{% macro form_page(titolo, hint=None) %}
+<h1 class="page-title">{{ titolo }}</h1>
+{% if hint %}<p class="hint" style="margin: -0.75rem 0 1.25rem;">{{ hint }}</p>{% endif %}
+<div class="card card-form">
+<form method="post">
+{{ caller() }}
+</form>
+</div>
+{% endmacro %}
+
+{% macro modal_trigger(target_id, label, classe="button-link") %}
+<button type="button" class="{{ classe }}" onclick="document.getElementById('{{ target_id }}').showModal()">{{ label }}</button>
+{% endmacro %}
+
+{% macro modal(id, titolo, azione=None) %}
+<dialog id="{{ id }}" class="modal">
+    <div class="modal-header">
+        <h2>{{ titolo }}</h2>
+        <button type="button" class="modal-close" onclick="document.getElementById('{{ id }}').close()" aria-label="Chiudi">×</button>
+    </div>
+    <form method="post"{% if azione %} action="{{ azione }}"{% endif %}>
+        {{ caller() }}
+    </form>
+</dialog>
+{% endmacro %}

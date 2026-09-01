@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Gestionale Pollaio{% endblock %}</title>
+    <title>{% block title %}PiteDex{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/pitedex_favicon.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -12,8 +13,7 @@
 <body>
     <header class="navbar">
         <div class="navbar-brand">
-            <span class="navbar-logo" aria-hidden="true">🐔</span>
-            <span>Gestionale Pollaio</span>
+            <img src="{{ url_for('static', filename='img/pitedex_title.png') }}" alt="Pitedex" class="navbar-title-img">
         </div>
         <div class="navbar-date">{{ oggi }}</div>
     </header>
@@ -21,20 +21,32 @@
     <div class="layout">
         <aside class="sidebar">
             <nav>
-                <a href="{{ url_for('incubazione_lista') }}" class="nav-link {{ 'active' if request.endpoint in ['incubazione_lista', 'incubazione_nuova', 'incubazione_schiusa', 'incubazione_scarti', 'incubazione_promuovi'] else '' }}">
-                    <span class="nav-icon" aria-hidden="true">🥚</span> Incubazione
+                <a href="{{ url_for('incubazione_lista') }}" class="nav-link {{ 'active' if request.endpoint == 'incubazione_lista' else '' }}">
+                    <span class="nav-icon" aria-hidden="true">🐣</span> Incubazione
                 </a>
-                <a href="{{ url_for('pulcinaia_lista') }}" class="nav-link {{ 'active' if request.endpoint in ['pulcinaia_lista', 'pulcinaia_nuova', 'pulcinaia_uscita'] else '' }}">
+                <a href="{{ url_for('pulcinaia_lista') }}" class="nav-link {{ 'active' if request.endpoint == 'pulcinaia_lista' else '' }}">
                     <span class="nav-icon" aria-hidden="true">🐤</span> Pulcinaia
                 </a>
                 <a href="{{ url_for('index') }}" class="nav-link {{ 'active' if request.endpoint == 'index' else '' }}">
                     <span class="nav-icon" aria-hidden="true">🐔</span> Pollaio
                 </a>
-                <a href="{{ url_for('query') }}" class="nav-link {{ 'active' if request.endpoint == 'query' else '' }}">
-                    <span class="nav-icon" aria-hidden="true">🔍</span> Query
+                <a href="{{ url_for('registro_uova_lista') }}" class="nav-link {{ 'active' if request.endpoint in ['registro_uova_lista', 'registro_uova_raccolta', 'registro_uova_vendita'] else '' }}">
+                    <span class="nav-icon" aria-hidden="true">🥚</span> Uova
                 </a>
+
+                <div class="nav-separator" role="separator"></div>
+
+                <a href="{{ url_for('bilancio') }}" class="nav-link {{ 'active' if request.endpoint == 'bilancio' else '' }}">
+                    <span class="nav-icon" aria-hidden="true">💶</span> Bilancio
+                </a>
+                <a href="{{ url_for('log_attivita') }}" class="nav-link {{ 'active' if request.endpoint == 'log_attivita' else '' }}">
+                    <span class="nav-icon" aria-hidden="true">📜</span> Log attività
+                </a>
+
+                <div class="nav-separator" role="separator"></div>
+
                 <a href="{{ url_for('razze_lista') }}" class="nav-link {{ 'active' if request.endpoint in ['razze_lista', 'razza_nuova', 'razza_modifica'] else '' }}">
-                    <span class="nav-icon" aria-hidden="true">🐓</span> Razze
+                    <span class="nav-icon" aria-hidden="true">⚙️</span> Impostazioni
                 </a>
             </nav>
         </aside>

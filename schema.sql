@@ -12,63 +12,82 @@ CREATE TABLE IF NOT EXISTS razze (
     curva_fabbisogno_energetico TEXT
 );
 
-CREATE TABLE IF NOT EXISTS lotti (
+-- Log di eventi per l'incubatrice. Nessun concetto di lotto: le uova con la
+-- stessa razza sono fungibili fra loro, il pool è a livello di razza (coerente
+-- con "tasso di schiusa per singola razza" come obiettivo di monitoraggio).
+-- Direzione determinata dal tipo di evento: entrata/acquisto sommano al pool,
+-- perdita/trasferimento sottraggono. 'trasferimento' è l'uscita per il
+-- passaggio (fisico) a pulcinaia, registrata dalla stessa azione utente che
+-- crea la riga 'entrata' in eventi_pulcinaia, ma senza alcun collegamento per
+-- id fra le due righe: sono due pool indipendenti.
+CREATE TABLE IF NOT EXISTS eventi_incubatrice (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     razza_id INTEGER NOT NULL REFERENCES razze(id),
-    sesso TEXT NOT NULL CHECK (sesso IN ('M', 'F')),
-    destinazione TEXT NOT NULL CHECK (destinazione IN ('riproduzione', 'uova', 'carne', 'rivendita')),
-    data_nascita TEXT NOT NULL,
-    data_ingresso TEXT NOT NULL,
-    prezzo_acquisto_totale REAL,
-    numero_capi_iniziale INTEGER NOT NULL,
-    numero_capi_attuale INTEGER NOT NULL,
-    pulcini_id INTEGER REFERENCES pulcini(id)
-);
-
-CREATE TABLE IF NOT EXISTS uscite (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    lotto_id INTEGER NOT NULL REFERENCES lotti(id),
-    tipo TEXT NOT NULL CHECK (tipo IN ('vendita', 'macellazione', 'morte')),
+    evento TEXT NOT NULL CHECK (evento IN ('entrata', 'acquisto', 'perdita', 'trasferimento')),
     data TEXT NOT NULL,
-    numero_capi INTEGER NOT NULL,
-    prezzo_vendita_totale REAL
-);
-
--- Lotti di uova impostate in incubatrice. La schiusa si registra a parte
--- (pulcini_nati/data_schiusa restano NULL finché non avviene): il tasso di
--- mortalità embrionale e l'efficienza di schiusa si calcolano solo dopo.
-CREATE TABLE IF NOT EXISTS incubazioni (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    razza_id INTEGER NOT NULL REFERENCES razze(id),
-    data_inizio TEXT NOT NULL,
-    uova_impostate INTEGER NOT NULL,
-    uova_infertili INTEGER NOT NULL DEFAULT 0,
-    pulcini_nati INTEGER,
-    data_schiusa TEXT,
-    pulcini_promossi INTEGER NOT NULL DEFAULT 0,
+    numero_uova INTEGER NOT NULL CHECK (numero_uova > 0),
+    prezzo_acquisto_totale REAL,
     note TEXT
 );
 
--- Lotti di pulcini in pulcinaia. Niente campo sesso: per la maggior parte
--- delle razze non è determinabile a questo stadio (si assegna solo alla
--- promozione a Pollaio, quando i caratteri secondari sono visibili).
-CREATE TABLE IF NOT EXISTS pulcini (
+-- Log di eventi per la pulcinaia. Il pool è a livello di (razza, data_nascita):
+-- due entrate con la stessa razza e stessa data di nascita confluiscono nello
+-- stesso gruppo. Direzione dal tipo di evento: entrata/acquisto sommano,
+-- vendita/promozione/perdita sottraggono.
+CREATE TABLE IF NOT EXISTS eventi_pulcinaia (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     razza_id INTEGER NOT NULL REFERENCES razze(id),
-    incubazione_id INTEGER REFERENCES incubazioni(id),
+    evento TEXT NOT NULL CHECK (evento IN ('entrata', 'acquisto', 'vendita', 'promozione', 'perdita')),
+    data TEXT NOT NULL,
+    numero_capi INTEGER NOT NULL CHECK (numero_capi > 0),
     data_nascita TEXT NOT NULL,
-    data_ingresso TEXT NOT NULL,
     prezzo_acquisto_totale REAL,
-    numero_capi_iniziale INTEGER NOT NULL,
-    numero_capi_attuale INTEGER NOT NULL
+    prezzo_vendita_totale REAL,
+    note TEXT
 );
 
-CREATE TABLE IF NOT EXISTS uscite_pulcinaia (
+-- Log di eventi per il pollaio. Il pool è a livello di (razza, sesso,
+-- anno_nascita, destinazione) — la combinazione di caratteristiche che rende
+-- due capi indistinguibili e fungibili fra loro. Niente pollaio/recinto:
+-- ogni razza vive già in un pollaio fisico distinto, quindi la razza stessa
+-- lo identifica implicitamente — un id di pollaio separato sarebbe una
+-- dimensione ridondante. anno_nascita (non data esatta): coerente con
+-- animali non nati in azienda.
+-- Direzione dal tipo di evento: acquisto/promozione/cambio_destinazione_entrata
+-- sommano; vendita/perdita/macellazione/cambio_destinazione_uscita sottraggono.
+-- Il cambio destinazione è due righe indipendenti (stesse caratteristiche di
+-- origine, stesso numero_capi): una 'cambio_destinazione_uscita' sul pool con
+-- la vecchia destinazione, una 'cambio_destinazione_entrata' su quello con la
+-- nuova — due evento distinti perché non esiste un lotto_id da cui dedurre la
+-- direzione.
+CREATE TABLE IF NOT EXISTS eventi_pollaio (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    pulcini_id INTEGER NOT NULL REFERENCES pulcini(id),
-    tipo TEXT NOT NULL CHECK (tipo IN ('promozione', 'vendita', 'morte')),
+    razza_id INTEGER NOT NULL REFERENCES razze(id),
+    evento TEXT NOT NULL CHECK (evento IN
+        ('promozione', 'acquisto', 'vendita', 'perdita', 'macellazione',
+         'cambio_destinazione_uscita', 'cambio_destinazione_entrata')),
     data TEXT NOT NULL,
-    numero_capi INTEGER NOT NULL,
+    numero_capi INTEGER NOT NULL CHECK (numero_capi > 0),
+    sesso TEXT NOT NULL CHECK (sesso IN ('M', 'F')),
+    anno_nascita INTEGER NOT NULL,
+    destinazione TEXT NOT NULL CHECK (destinazione IN ('riproduzione', 'uova', 'carne', 'rivendita')),
+    prezzo_acquisto_totale REAL,
     prezzo_vendita_totale REAL,
-    lotto_pollaio_id INTEGER REFERENCES lotti(id)
+    note TEXT
 );
+
+-- Log di eventi per il registro uova. Pool a livello di razza. Nessuna data di
+-- nascita da tracciare: le uova raccolte sono fungibili.
+CREATE TABLE IF NOT EXISTS eventi_registro_uova (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    razza_id INTEGER NOT NULL REFERENCES razze(id),
+    evento TEXT NOT NULL CHECK (evento IN ('raccolta', 'vendita')),
+    data TEXT NOT NULL,
+    numero_uova INTEGER NOT NULL CHECK (numero_uova > 0),
+    prezzo_vendita_totale REAL,
+    note TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_eventi_incubatrice_razza ON eventi_incubatrice(razza_id);
+CREATE INDEX IF NOT EXISTS idx_eventi_pulcinaia_gruppo ON eventi_pulcinaia(razza_id, data_nascita);
+CREATE INDEX IF NOT EXISTS idx_eventi_pollaio_gruppo ON eventi_pollaio(razza_id, sesso, anno_nascita, destinazione);
