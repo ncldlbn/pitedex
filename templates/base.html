@@ -48,6 +48,12 @@
                 <a href="{{ url_for('razze_lista') }}" class="nav-link {{ 'active' if request.endpoint in ['razze_lista', 'razza_nuova', 'razza_modifica'] else '' }}">
                     <span class="nav-icon" aria-hidden="true">⚙️</span> Impostazioni
                 </a>
+
+                <div class="nav-separator" role="separator"></div>
+
+                <a href="{{ url_for('logout') }}" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">🚪</span> Esci
+                </a>
             </nav>
         </aside>
 

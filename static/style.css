@@ -577,6 +577,29 @@ dialog.modal form {
     padding: 0 1.25rem 1.25rem;
 }
 
+/* Login */
+
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-page);
+    padding: 1.5rem;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 360px;
+}
+
+.login-logo {
+    display: block;
+    height: 40px;
+    width: auto;
+    margin: 0 auto 1.5rem;
+}
+
 /* Responsive */
 
 @media (max-width: 720px) {

@@ -1,8 +1,9 @@
+import os
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
-from flask import Flask, g, redirect, render_template, request, url_for, flash
+from flask import Flask, g, redirect, render_template, request, session, url_for, flash
 
 DB_PATH = Path(__file__).parent / "pollaio.db"
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
@@ -41,7 +42,36 @@ RAZZE_SEED = [
 ]
 
 app = Flask(__name__)
-app.secret_key = "dev"
+app.secret_key = os.environ.get("SECRET_KEY", "dev-insecure-change-me")
+app.permanent_session_lifetime = timedelta(days=365)
+
+DEMO_USERNAME = os.environ.get("DEMO_USERNAME", "admin")
+DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "1234")
+
+
+@app.before_request
+def richiedi_login():
+    if request.endpoint in ("login", "static") or request.endpoint is None:
+        return
+    if not session.get("loggato"):
+        return redirect(url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        if request.form.get("username") == DEMO_USERNAME and request.form.get("password") == DEMO_PASSWORD:
+            session.permanent = True
+            session["loggato"] = True
+            return redirect(url_for("index"))
+        flash("Utente o password errati")
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 
 @app.context_processor
