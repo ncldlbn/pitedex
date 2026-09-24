@@ -27,14 +27,6 @@
                 {% endfor %}
             </select>
         </label>
-        <label>Classe età
-            <select name="classe_eta">
-                <option value="">Tutte</option>
-                {% for c in classi_eta %}
-                <option value="{{ c }}" {{ 'selected' if filtri.classe_eta == c else '' }}>{{ c }}</option>
-                {% endfor %}
-            </select>
-        </label>
         <button type="submit">Filtra</button>
         <a class="button-link button-link-secondary" href="{{ url_for('query') }}">Azzera</a>
     </form>
@@ -50,7 +42,6 @@
                     <th>Razza</th>
                     <th>Sesso</th>
                     <th>Età (mesi)</th>
-                    <th>Classe</th>
                     <th>Destinazione</th>
                     <th>N. capi</th>
                 </tr>
@@ -61,12 +52,11 @@
                     <td>{{ l.razza_nome }}</td>
                     <td>{{ l.sesso }}</td>
                     <td class="num">{{ l.eta_mesi_attuale }}</td>
-                    <td>{{ l.classe_eta }}</td>
                     <td><span class="badge">{{ destinazioni[l.destinazione] }}</span></td>
                     <td class="num">{{ l.numero_capi_attuale }}</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="6" class="empty">Nessun gruppo corrisponde ai filtri.</td></tr>
+                <tr><td colspan="5" class="empty">Nessun gruppo corrisponde ai filtri.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

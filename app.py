@@ -28,18 +28,7 @@ TIPI_USCITA_POLLAIO = {
     "perdita": "Perdita",
 }
 
-CLASSI_ETA = ["Pulcino", "Pollastro", "Produttivo", "Pensionato"]
-
-# Soglie di partenza da letteratura avicola generica (Bell & Weaver, NRC) —
-# da correggere nella scheda "Razze" in base all'esperienza diretta.
-RAZZE_SEED = [
-    # nome, eta_pollastro, eta_produttivo, eta_pensionato (mesi)
-    ("ISA Brown", 2, 4.5, 18),
-    ("Australorp", 2.5, 5.5, 30),
-    ("Plymouth Rock", 2.5, 5.5, 30),
-    ("Pepoi", 3, 6.5, 36),
-    ("Moroseta / Silkie", 3.5, 7, 40),
-]
+RAZZE_SEED = ["ISA Brown", "Australorp", "Plymouth Rock", "Pepoi", "Moroseta / Silkie"]
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-insecure-change-me")
@@ -101,11 +90,7 @@ def init_db():
     db.executescript(SCHEMA_PATH.read_text())
 
     if db.execute("SELECT COUNT(*) FROM razze").fetchone()[0] == 0:
-        db.executemany(
-            """INSERT INTO razze (nome, eta_pollastro_mesi, eta_produttivo_mesi, eta_pensionato_mesi)
-               VALUES (?, ?, ?, ?)""",
-            RAZZE_SEED,
-        )
+        db.executemany("INSERT INTO razze (nome) VALUES (?)", [(nome,) for nome in RAZZE_SEED])
 
     db.commit()
     db.close()
@@ -120,24 +105,14 @@ def eta_in_mesi(data_nascita_iso, riferimento=None):
     return max((riferimento - nascita).days // 30, 0)
 
 
-def classe_eta(eta_mesi, razza):
-    if eta_mesi < razza["eta_pollastro_mesi"]:
-        return "Pulcino"
-    if eta_mesi < razza["eta_produttivo_mesi"]:
-        return "Pollastro"
-    if eta_mesi < razza["eta_pensionato_mesi"]:
-        return "Produttivo"
-    return "Pensionato"
-
-
 def data_nascita_approssimata(anno_nascita):
     """anno_nascita (Pollaio) -> data approssimata (convenzione: metà anno),
-    per riusare eta_in_mesi()/classe_eta() che lavorano su una data esatta."""
+    per riusare eta_in_mesi() che lavora su una data esatta."""
     return f"{anno_nascita}-07-01"
 
 
 def pollaio_disponibili(db, razza_id=None, sesso=None, destinazione=None,
-                         classe_eta_filtro=None, anno_nascita=None, data_riferimento=None):
+                         anno_nascita=None, data_riferimento=None):
     """Pool di pollaio in stock (numero_capi_attuale > 0) a una data di
     riferimento, un gruppo per combinazione di caratteristiche (razza, sesso,
     anno_nascita, destinazione) — niente identità di lotto: due capi con le
@@ -171,8 +146,7 @@ def pollaio_disponibili(db, razza_id=None, sesso=None, destinazione=None,
     righe = db.execute(
         f"""
         SELECT s.razza_id, razze.nome AS razza_nome,
-               s.sesso, s.anno_nascita, s.destinazione, s.numero_capi_attuale,
-               razze.eta_pollastro_mesi, razze.eta_produttivo_mesi, razze.eta_pensionato_mesi
+               s.sesso, s.anno_nascita, s.destinazione, s.numero_capi_attuale
         FROM (
           SELECT razza_id, sesso, anno_nascita, destinazione,
                  SUM(CASE
@@ -194,10 +168,7 @@ def pollaio_disponibili(db, razza_id=None, sesso=None, destinazione=None,
     for r in righe:
         data_nascita = data_nascita_approssimata(r["anno_nascita"])
         eta_mesi = eta_in_mesi(data_nascita)
-        classe = classe_eta(eta_mesi, r)
-        if classe_eta_filtro and classe != classe_eta_filtro:
-            continue
-        risultato.append({**dict(r), "eta_mesi_attuale": eta_mesi, "classe_eta": classe})
+        risultato.append({**dict(r), "eta_mesi_attuale": eta_mesi})
     return risultato
 
 
@@ -223,8 +194,7 @@ def pulcinaia_disponibili(db, razza_id=None, data_nascita=None):
 
     righe = db.execute(
         f"""
-        SELECT s.razza_id, razze.nome AS razza_nome, s.data_nascita, s.numero_capi_attuale,
-               razze.eta_pollastro_mesi, razze.eta_produttivo_mesi, razze.eta_pensionato_mesi
+        SELECT s.razza_id, razze.nome AS razza_nome, s.data_nascita, s.numero_capi_attuale
         FROM (
           SELECT razza_id, data_nascita,
                  SUM(CASE WHEN evento IN ('entrata','acquisto') THEN numero_capi ELSE -numero_capi END)
@@ -241,8 +211,7 @@ def pulcinaia_disponibili(db, razza_id=None, data_nascita=None):
 
     risultato = []
     for r in righe:
-        eta_mesi = eta_in_mesi(r["data_nascita"])
-        risultato.append({**dict(r), "eta_mesi_attuale": eta_mesi, "classe_eta": classe_eta(eta_mesi, r)})
+        risultato.append({**dict(r), "eta_mesi_attuale": eta_in_mesi(r["data_nascita"])})
     return risultato
 
 
@@ -572,7 +541,6 @@ def query():
         "razza_id": request.args.get("razza_id", ""),
         "sesso": request.args.get("sesso", ""),
         "destinazione": request.args.get("destinazione", ""),
-        "classe_eta": request.args.get("classe_eta", ""),
     }
 
     risultati = pollaio_disponibili(
@@ -580,7 +548,6 @@ def query():
         razza_id=filtri["razza_id"] or None,
         sesso=filtri["sesso"] or None,
         destinazione=filtri["destinazione"] or None,
-        classe_eta_filtro=filtri["classe_eta"] or None,
     )
     totale_capi = sum(l["numero_capi_attuale"] for l in risultati)
 
@@ -588,7 +555,6 @@ def query():
         "query.html",
         razze=razze,
         destinazioni=DESTINAZIONI,
-        classi_eta=CLASSI_ETA,
         risultati=risultati,
         filtri=filtri,
         totale_capi=totale_capi,
@@ -806,44 +772,12 @@ def registro_uova_vendita():
     return render_template("registro_uova_vendita.html", razze=razze)
 
 
-def _numero_o_none(form, campo):
-    valore = form.get(campo)
-    return float(valore) if valore else None
-
-
 def _salva_razza(db, form, razza_id=None):
-    dati = (
-        form["nome"],
-        float(form["eta_pollastro_mesi"]),
-        float(form["eta_produttivo_mesi"]),
-        float(form["eta_pensionato_mesi"]),
-        _numero_o_none(form, "rivendita_eta_min_mesi"),
-        _numero_o_none(form, "rivendita_eta_max_mesi"),
-        _numero_o_none(form, "macellazione_eta_min_mesi"),
-        _numero_o_none(form, "macellazione_eta_max_mesi"),
-        form.get("curva_deposizione") or None,
-        form.get("curva_fabbisogno_energetico") or None,
-    )
+    nome = form["nome"]
     if razza_id is None:
-        db.execute(
-            """INSERT INTO razze
-               (nome, eta_pollastro_mesi, eta_produttivo_mesi, eta_pensionato_mesi,
-                rivendita_eta_min_mesi, rivendita_eta_max_mesi,
-                macellazione_eta_min_mesi, macellazione_eta_max_mesi,
-                curva_deposizione, curva_fabbisogno_energetico)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            dati,
-        )
+        db.execute("INSERT INTO razze (nome) VALUES (?)", (nome,))
     else:
-        db.execute(
-            """UPDATE razze SET
-                   nome=?, eta_pollastro_mesi=?, eta_produttivo_mesi=?, eta_pensionato_mesi=?,
-                   rivendita_eta_min_mesi=?, rivendita_eta_max_mesi=?,
-                   macellazione_eta_min_mesi=?, macellazione_eta_max_mesi=?,
-                   curva_deposizione=?, curva_fabbisogno_energetico=?
-               WHERE id=?""",
-            dati + (razza_id,),
-        )
+        db.execute("UPDATE razze SET nome=? WHERE id=?", (nome, razza_id))
 
 
 @app.route("/bilancio")

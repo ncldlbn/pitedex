@@ -6,33 +6,6 @@
     <label>Nome
         <input type="text" name="nome" value="{{ razza.nome if razza else '' }}" required>
     </label>
-    <label>Età inizio Pollastro (mesi)
-        <input type="number" step="0.5" min="0" name="eta_pollastro_mesi" value="{{ razza.eta_pollastro_mesi if razza else '' }}" required>
-    </label>
-    <label>Età inizio Produttivo (mesi)
-        <input type="number" step="0.5" min="0" name="eta_produttivo_mesi" value="{{ razza.eta_produttivo_mesi if razza else '' }}" required>
-    </label>
-    <label>Età inizio Pensionato (mesi)
-        <input type="number" step="0.5" min="0" name="eta_pensionato_mesi" value="{{ razza.eta_pensionato_mesi if razza else '' }}" required>
-    </label>
-    <label>Rivendita — età minima (mesi)
-        <input type="number" step="0.5" min="0" name="rivendita_eta_min_mesi" value="{{ razza.rivendita_eta_min_mesi if razza and razza.rivendita_eta_min_mesi is not none else '' }}">
-    </label>
-    <label>Rivendita — età massima (mesi)
-        <input type="number" step="0.5" min="0" name="rivendita_eta_max_mesi" value="{{ razza.rivendita_eta_max_mesi if razza and razza.rivendita_eta_max_mesi is not none else '' }}">
-    </label>
-    <label>Macellazione — età minima (mesi)
-        <input type="number" step="0.5" min="0" name="macellazione_eta_min_mesi" value="{{ razza.macellazione_eta_min_mesi if razza and razza.macellazione_eta_min_mesi is not none else '' }}">
-    </label>
-    <label>Macellazione — età massima (mesi)
-        <input type="number" step="0.5" min="0" name="macellazione_eta_max_mesi" value="{{ razza.macellazione_eta_max_mesi if razza and razza.macellazione_eta_max_mesi is not none else '' }}">
-    </label>
-    <label>Curva di deposizione (note — Fase 2)
-        <textarea name="curva_deposizione" rows="3">{{ razza.curva_deposizione if razza and razza.curva_deposizione else '' }}</textarea>
-    </label>
-    <label>Curva di fabbisogno energetico (note — Fase 2)
-        <textarea name="curva_fabbisogno_energetico" rows="3">{{ razza.curva_fabbisogno_energetico if razza and razza.curva_fabbisogno_energetico else '' }}</textarea>
-    </label>
     <button type="submit">Salva</button>
 </form>
 </div>

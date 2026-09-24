@@ -1,15 +1,6 @@
 CREATE TABLE IF NOT EXISTS razze (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL UNIQUE,
-    eta_pollastro_mesi REAL NOT NULL,
-    eta_produttivo_mesi REAL NOT NULL,
-    eta_pensionato_mesi REAL NOT NULL,
-    rivendita_eta_min_mesi REAL,
-    rivendita_eta_max_mesi REAL,
-    macellazione_eta_min_mesi REAL,
-    macellazione_eta_max_mesi REAL,
-    curva_deposizione TEXT,
-    curva_fabbisogno_energetico TEXT
+    nome TEXT NOT NULL UNIQUE
 );
 
 -- Log di eventi per l'incubatrice. Nessun concetto di lotto: le uova con la
