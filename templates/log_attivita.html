@@ -1,5 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
 <h1 class="page-title">Log attività</h1>
-<p class="hint">Pagina in arrivo.</p>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <form method="get" class="query-form">
+        <label>Area
+            <select name="area">
+                <option value="">Tutte</option>
+                {% for chiave, info in aree.items() %}
+                <option value="{{ chiave }}" {{ 'selected' if filtri.area == chiave else '' }}>{{ info[0] }} {{ info[1] }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Razza
+            <select name="razza_id">
+                <option value="">Tutte</option>
+                {% for r in razze %}
+                <option value="{{ r.id }}" {{ 'selected' if filtri.razza_id == r.id|string else '' }}>{{ r.nome }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Tipo evento
+            <select name="evento">
+                <option value="">Tutti</option>
+                {% for chiave, etichetta in eventi_label.items() %}
+                <option value="{{ chiave }}" {{ 'selected' if filtri.evento == chiave else '' }}>{{ etichetta }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit">Filtra</button>
+        <a class="button-link button-link-secondary" href="{{ url_for('log_attivita') }}">Azzera</a>
+    </form>
+</div>
+
+<div class="card matrice-scroll">
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Area</th>
+                <th>Evento</th>
+                <th>Razza</th>
+                <th>Dettaglio</th>
+                <th>Quantità</th>
+                <th>Prezzo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in eventi %}
+            <tr>
+                <td>{{ e.data }}</td>
+                <td>{{ e.icona }} {{ e.area }}</td>
+                <td>{{ e.evento }}</td>
+                <td>{{ e.razza }}</td>
+                <td>{{ e.dettaglio }}</td>
+                <td class="num">{{ e.segno }}{{ e.quantita }} {{ e.unita }}</td>
+                <td class="num">{% if e.prezzo %}€ {{ '%.2f'|format(e.prezzo) }} ({{ e.prezzo_tipo }}){% else %}—{% endif %}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty">Nessun evento corrisponde ai filtri.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

@@ -4,9 +4,9 @@
 <div class="azioni-bar">
     <div class="azioni-bar-gruppo">
         {{ macros.modal_trigger("modal-entrata", "Registra ingresso") }}
+        {{ macros.modal_trigger("modal-perdita", "Registra perdita", "button-link button-link-secondary") }}
         {{ macros.modal_trigger("modal-vendita", "Registra vendita", "button-link button-link-secondary") }}
         {{ macros.modal_trigger("modal-macellazione", "Registra macellazione", "button-link button-link-secondary") }}
-        {{ macros.modal_trigger("modal-perdita", "Registra perdita", "button-link button-link-secondary") }}
         {{ macros.modal_trigger("modal-cambio-destinazione", "Cambio destinazione", "button-link button-link-secondary") }}
     </div>
     <div class="controlli-vista">
@@ -132,18 +132,21 @@
     <input type="hidden" name="razza_id" id="vendita-razza-id">
     <input type="hidden" name="sesso" id="vendita-sesso">
     <input type="hidden" name="anno_nascita" id="vendita-anno-nascita">
-    <input type="hidden" name="destinazione" id="vendita-destinazione">
-    <label>Gruppo
-        <select id="vendita-gruppo" required>
-            {% for g in gruppi_pollaio if g.destinazione == 'rivendita' %}
-            <option value="{{ g.razza_id }}|{{ g.sesso }}|{{ g.anno_nascita }}|{{ g.destinazione }}" data-max="{{ g.numero_capi_attuale }}">
-                {{ g.razza_nome }} · {{ g.sesso }} · {{ g.numero_capi_attuale }} disponibili
-            </option>
-            {% endfor %}
-        </select>
+    <input type="hidden" name="destinazione" value="rivendita">
+    <label>Razza
+        <select id="vendita-select-razza"></select>
+    </label>
+    <label>Sesso
+        <select id="vendita-select-sesso"></select>
+    </label>
+    <label>Nati nel
+        <select id="vendita-select-anno"></select>
     </label>
     <label>Numero capi
-        <input type="number" name="numero_capi" id="vendita-numero" value="1" min="1" required>
+        <span class="campo-con-badge">
+            <input type="number" name="numero_capi" id="vendita-numero" value="1" min="1" required>
+            <span class="badge" id="vendita-disponibili-hint"></span>
+        </span>
     </label>
     <label>Prezzo di vendita totale (€)
         <input type="number" name="prezzo_vendita" id="vendita-prezzo" step="0.01" min="0">
@@ -156,18 +159,21 @@
     <input type="hidden" name="razza_id" id="macellazione-razza-id">
     <input type="hidden" name="sesso" id="macellazione-sesso">
     <input type="hidden" name="anno_nascita" id="macellazione-anno-nascita">
-    <input type="hidden" name="destinazione" id="macellazione-destinazione">
-    <label>Gruppo
-        <select id="macellazione-gruppo" required>
-            {% for g in gruppi_pollaio if g.destinazione == 'carne' %}
-            <option value="{{ g.razza_id }}|{{ g.sesso }}|{{ g.anno_nascita }}|{{ g.destinazione }}" data-max="{{ g.numero_capi_attuale }}">
-                {{ g.razza_nome }} · {{ g.sesso }} · {{ g.numero_capi_attuale }} disponibili
-            </option>
-            {% endfor %}
-        </select>
+    <input type="hidden" name="destinazione" value="carne">
+    <label>Razza
+        <select id="macellazione-select-razza"></select>
+    </label>
+    <label>Sesso
+        <select id="macellazione-select-sesso"></select>
+    </label>
+    <label>Nati nel
+        <select id="macellazione-select-anno"></select>
     </label>
     <label>Numero capi
-        <input type="number" name="numero_capi" id="macellazione-numero" value="1" min="1" required>
+        <span class="campo-con-badge">
+            <input type="number" name="numero_capi" id="macellazione-numero" value="1" min="1" required>
+            <span class="badge" id="macellazione-disponibili-hint"></span>
+        </span>
     </label>
     <button type="submit">Registra</button>
 {% endcall %}
@@ -178,17 +184,23 @@
     <input type="hidden" name="sesso" id="perdita-sesso">
     <input type="hidden" name="anno_nascita" id="perdita-anno-nascita">
     <input type="hidden" name="destinazione" id="perdita-destinazione">
-    <label>Gruppo
-        <select id="perdita-gruppo" required>
-            {% for g in gruppi_pollaio %}
-            <option value="{{ g.razza_id }}|{{ g.sesso }}|{{ g.anno_nascita }}|{{ g.destinazione }}" data-max="{{ g.numero_capi_attuale }}">
-                {{ g.razza_nome }} · {{ g.sesso }} · {{ destinazioni[g.destinazione] }} · {{ g.numero_capi_attuale }} disponibili
-            </option>
-            {% endfor %}
-        </select>
+    <label>Razza
+        <select id="perdita-select-razza"></select>
+    </label>
+    <label>Sesso
+        <select id="perdita-select-sesso"></select>
+    </label>
+    <label>Nati nel
+        <select id="perdita-select-anno"></select>
+    </label>
+    <label>Destinazione d'uso
+        <select id="perdita-select-destinazione"></select>
     </label>
     <label>Numero capi
-        <input type="number" name="numero_capi" id="perdita-numero" value="1" min="1" required>
+        <span class="campo-con-badge">
+            <input type="number" name="numero_capi" id="perdita-numero" value="1" min="1" required>
+            <span class="badge" id="perdita-disponibili-hint"></span>
+        </span>
     </label>
     <button type="submit">Registra</button>
 {% endcall %}
@@ -198,17 +210,23 @@
     <input type="hidden" name="sesso" id="cd-sesso">
     <input type="hidden" name="anno_nascita" id="cd-anno-nascita">
     <input type="hidden" name="destinazione" id="cd-destinazione">
-    <label>Gruppo
-        <select id="cd-gruppo" required>
-            {% for g in gruppi_pollaio %}
-            <option value="{{ g.razza_id }}|{{ g.sesso }}|{{ g.anno_nascita }}|{{ g.destinazione }}" data-max="{{ g.numero_capi_attuale }}">
-                {{ g.razza_nome }} · {{ g.sesso }} · attualmente {{ destinazioni[g.destinazione] }} · {{ g.numero_capi_attuale }} disponibili
-            </option>
-            {% endfor %}
-        </select>
+    <label>Razza
+        <select id="cd-select-razza"></select>
+    </label>
+    <label>Sesso
+        <select id="cd-select-sesso"></select>
+    </label>
+    <label>Nati nel
+        <select id="cd-select-anno"></select>
+    </label>
+    <label>Destinazione attuale
+        <select id="cd-select-destinazione"></select>
     </label>
     <label>Numero capi da spostare
-        <input type="number" name="numero_capi" id="cd-numero" value="1" min="1" required>
+        <span class="campo-con-badge">
+            <input type="number" name="numero_capi" id="cd-numero" value="1" min="1" required>
+            <span class="badge" id="cd-disponibili-hint"></span>
+        </span>
     </label>
     <label>Nuova destinazione
         <select name="nuova_destinazione" required>
@@ -269,60 +287,97 @@
         aggiorna();
     })();
 
-    function initModaleUscita(prefix) {
-        const gruppo = document.getElementById(prefix + "-gruppo");
+    const GRUPPI_POLLAIO = {{ gruppi_pollaio|tojson }};
+    const DESTINAZIONE_LABEL = {{ destinazioni|tojson }};
+
+    function opzioniUniche(righe, chiave, etichettaFn) {
+        const viste = new Map();
+        righe.forEach(r => {
+            const valore = String(r[chiave]);
+            if (!viste.has(valore)) viste.set(valore, etichettaFn(r));
+        });
+        return Array.from(viste.entries()).sort((a, b) => a[1].localeCompare(b[1], "it"));
+    }
+
+    function popola(select, opzioni) {
+        const precedente = select.value;
+        select.innerHTML = "";
+        opzioni.forEach(([valore, etichetta]) => {
+            const opt = document.createElement("option");
+            opt.value = valore;
+            opt.textContent = etichetta;
+            select.appendChild(opt);
+        });
+        if (opzioni.some(([valore]) => valore === precedente)) select.value = precedente;
+    }
+
+    function initCascataGruppo(prefix, righeBase, conDestinazione) {
+        const selRazza = document.getElementById(prefix + "-select-razza");
+        if (!selRazza) return;
+        const selSesso = document.getElementById(prefix + "-select-sesso");
+        const selAnno = document.getElementById(prefix + "-select-anno");
+        const selDestinazione = conDestinazione ? document.getElementById(prefix + "-select-destinazione") : null;
         const numero = document.getElementById(prefix + "-numero");
-        if (!gruppo) return;
+        const hint = document.getElementById(prefix + "-disponibili-hint");
         const campi = {
             razza_id: document.getElementById(prefix + "-razza-id"),
             sesso: document.getElementById(prefix + "-sesso"),
             anno_nascita: document.getElementById(prefix + "-anno-nascita"),
-            destinazione: document.getElementById(prefix + "-destinazione"),
+            destinazione: conDestinazione ? document.getElementById(prefix + "-destinazione") : null,
         };
 
-        function aggiorna() {
-            const opzione = gruppo.selectedOptions[0];
-            if (!opzione) return;
-            const [razzaId, sesso, annoNascita, destinazione] = opzione.value.split("|");
-            campi.razza_id.value = razzaId;
-            campi.sesso.value = sesso;
-            campi.anno_nascita.value = annoNascita;
-            campi.destinazione.value = destinazione;
-            numero.max = opzione.dataset.max;
+        const righePerRazza = () => righeBase.filter(r => String(r.razza_id) === selRazza.value);
+        const righePerSesso = () => righePerRazza().filter(r => r.sesso === selSesso.value);
+        const righePerAnno = () => righePerSesso().filter(r => String(r.anno_nascita) === selAnno.value);
+
+        function aggiornaFinale() {
+            const riga = conDestinazione
+                ? righePerAnno().find(r => r.destinazione === selDestinazione.value)
+                : righePerAnno()[0];
+            if (!riga) {
+                hint.textContent = "Nessun capo disponibile.";
+                numero.max = 0;
+                return;
+            }
+            campi.razza_id.value = riga.razza_id;
+            campi.sesso.value = riga.sesso;
+            campi.anno_nascita.value = riga.anno_nascita;
+            if (conDestinazione) campi.destinazione.value = riga.destinazione;
+            numero.max = riga.numero_capi_attuale;
+            hint.textContent = riga.numero_capi_attuale + " disponibili";
         }
 
-        gruppo.addEventListener("change", aggiorna);
-        aggiorna();
+        function aggiornaDestinazione() {
+            if (conDestinazione) {
+                popola(selDestinazione, opzioniUniche(righePerAnno(), "destinazione", r => DESTINAZIONE_LABEL[r.destinazione]));
+            }
+            aggiornaFinale();
+        }
+
+        function aggiornaAnno() {
+            popola(selAnno, opzioniUniche(righePerSesso(), "anno_nascita", r => "Nati nel " + r.anno_nascita));
+            aggiornaDestinazione();
+        }
+
+        function aggiornaSesso() {
+            popola(selSesso, opzioniUniche(righePerRazza(), "sesso", r => r.sesso === "M" ? "Maschi" : "Femmine"));
+            aggiornaAnno();
+        }
+
+        popola(selRazza, opzioniUniche(righeBase, "razza_id", r => r.razza_nome));
+
+        selRazza.addEventListener("change", aggiornaSesso);
+        selSesso.addEventListener("change", aggiornaAnno);
+        selAnno.addEventListener("change", aggiornaDestinazione);
+        if (conDestinazione) selDestinazione.addEventListener("change", aggiornaFinale);
+
+        aggiornaSesso();
     }
 
-    initModaleUscita("vendita");
-    initModaleUscita("macellazione");
-    initModaleUscita("perdita");
-
-    (function () {
-        const gruppo = document.getElementById("cd-gruppo");
-        const numero = document.getElementById("cd-numero");
-        const campi = {
-            razza_id: document.getElementById("cd-razza-id"),
-            sesso: document.getElementById("cd-sesso"),
-            anno_nascita: document.getElementById("cd-anno-nascita"),
-            destinazione: document.getElementById("cd-destinazione"),
-        };
-
-        function aggiorna() {
-            const opzione = gruppo.selectedOptions[0];
-            if (!opzione) return;
-            const [razzaId, sesso, annoNascita, destinazione] = opzione.value.split("|");
-            campi.razza_id.value = razzaId;
-            campi.sesso.value = sesso;
-            campi.anno_nascita.value = annoNascita;
-            campi.destinazione.value = destinazione;
-            numero.max = opzione.dataset.max;
-        }
-
-        gruppo.addEventListener("change", aggiorna);
-        aggiorna();
-    })();
+    initCascataGruppo("vendita", GRUPPI_POLLAIO.filter(r => r.destinazione === "rivendita"), false);
+    initCascataGruppo("macellazione", GRUPPI_POLLAIO.filter(r => r.destinazione === "carne"), false);
+    initCascataGruppo("perdita", GRUPPI_POLLAIO, true);
+    initCascataGruppo("cd", GRUPPI_POLLAIO, true);
 
     (function () {
         const griglia = document.querySelector(".box-grid");

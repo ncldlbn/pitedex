@@ -220,6 +220,13 @@ a.razza-name:hover {
     color: var(--text-muted);
 }
 
+.razza-total-evidente {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
 /* Grafico a barre orizzontali (Pollaio) */
 
 .barre-orizzontali {
@@ -345,6 +352,16 @@ td.empty {
     color: var(--badge-text);
     font-size: 0.82rem;
     font-weight: 500;
+}
+
+.campo-con-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.campo-con-badge input {
+    flex: 1;
 }
 
 /* Forms */

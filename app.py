@@ -351,7 +351,7 @@ def index():
         elenco_razze=elenco_razze,
         destinazioni=DESTINAZIONI,
         composizione_razze=pollaio_composizione_per_razza(db),
-        gruppi_pollaio=pollaio_disponibili(db),
+        gruppi_pollaio=[dict(g) for g in pollaio_disponibili(db)],
         gruppi_pulcinaia=pulcinaia_disponibili(db),
     )
 
@@ -821,9 +821,124 @@ def bilancio():
     return render_template("bilancio.html")
 
 
+AREA_INFO = {
+    "incubazione": ("🐣", "Incubazione"),
+    "pulcinaia": ("🐤", "Pulcinaia"),
+    "pollaio": ("🐔", "Pollaio"),
+    "uova": ("🥚", "Uova"),
+}
+
+EVENTO_LABEL = {
+    "entrata": "Entrata",
+    "acquisto": "Acquisto",
+    "perdita": "Perdita",
+    "trasferimento": "Trasferimento in pulcinaia",
+    "promozione": "Promozione",
+    "vendita": "Vendita",
+    "macellazione": "Macellazione",
+    "cambio_destinazione_uscita": "Cambio destinazione",
+    "cambio_destinazione_entrata": "Cambio destinazione",
+    "raccolta": "Raccolta",
+}
+
+EVENTI_POSITIVI_PER_AREA = {
+    "incubazione": {"entrata", "acquisto"},
+    "pulcinaia": {"entrata", "acquisto"},
+    "pollaio": {"promozione", "acquisto", "cambio_destinazione_entrata"},
+    "uova": {"raccolta"},
+}
+
+# Solo per il filtro: distingue le due direzioni del cambio destinazione,
+# che in EVENTO_LABEL condividono la stessa etichetta visualizzata.
+EVENTO_LABEL_FILTRO = {
+    **EVENTO_LABEL,
+    "cambio_destinazione_uscita": "Cambio destinazione (uscita)",
+    "cambio_destinazione_entrata": "Cambio destinazione (entrata)",
+}
+
+
+def log_attivita_eventi(db, area=None, razza_id=None, evento=None):
+    """Unifica i quattro log di eventi in un unico feed cronologico, con filtri opzionali."""
+    righe = db.execute(
+        """
+        SELECT * FROM (
+            SELECT razza_id, evento, data, numero_uova AS quantita, 'uova' AS unita, 'incubazione' AS area,
+                   NULL AS sesso, NULL AS anno_nascita, NULL AS destinazione, NULL AS data_nascita,
+                   prezzo_acquisto_totale, NULL AS prezzo_vendita_totale
+            FROM eventi_incubatrice
+            UNION ALL
+            SELECT razza_id, evento, data, numero_capi, 'capi', 'pulcinaia',
+                   NULL, NULL, NULL, data_nascita,
+                   prezzo_acquisto_totale, prezzo_vendita_totale
+            FROM eventi_pulcinaia
+            UNION ALL
+            SELECT razza_id, evento, data, numero_capi, 'capi', 'pollaio',
+                   sesso, anno_nascita, destinazione, NULL,
+                   prezzo_acquisto_totale, prezzo_vendita_totale
+            FROM eventi_pollaio
+            UNION ALL
+            SELECT razza_id, evento, data, numero_uova, 'uova', 'uova',
+                   NULL, NULL, NULL, NULL,
+                   NULL, prezzo_vendita_totale
+            FROM eventi_registro_uova
+        )
+        WHERE (:area IS NULL OR area = :area)
+          AND (:razza_id IS NULL OR razza_id = :razza_id)
+          AND (:evento IS NULL OR evento = :evento)
+        ORDER BY data DESC, razza_id
+        """,
+        {"area": area, "razza_id": razza_id, "evento": evento},
+    ).fetchall()
+
+    razze = {r["id"]: r["nome"] for r in db.execute("SELECT id, nome FROM razze").fetchall()}
+
+    eventi = []
+    for r in righe:
+        icona, area_label = AREA_INFO[r["area"]]
+        dettagli = []
+        if r["sesso"]:
+            dettagli.append(SESSO_LABEL[r["sesso"]])
+        if r["anno_nascita"]:
+            dettagli.append(f"nati nel {r['anno_nascita']}")
+        if r["destinazione"]:
+            dettagli.append(DESTINAZIONI[r["destinazione"]])
+        if r["data_nascita"]:
+            dettagli.append(f"nato il {r['data_nascita']}")
+
+        prezzo = r["prezzo_vendita_totale"] or r["prezzo_acquisto_totale"]
+        prezzo_tipo = "vendita" if r["prezzo_vendita_totale"] else "acquisto"
+
+        eventi.append({
+            "data": r["data"],
+            "icona": icona,
+            "area": area_label,
+            "evento": EVENTO_LABEL.get(r["evento"], r["evento"]),
+            "razza": razze.get(r["razza_id"], "—"),
+            "segno": "+" if r["evento"] in EVENTI_POSITIVI_PER_AREA[r["area"]] else "-",
+            "quantita": r["quantita"],
+            "unita": r["unita"],
+            "dettaglio": " · ".join(dettagli),
+            "prezzo": prezzo,
+            "prezzo_tipo": prezzo_tipo,
+        })
+    return eventi
+
+
 @app.route("/log-attivita")
 def log_attivita():
-    return render_template("log_attivita.html")
+    db = get_db()
+    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    area = request.args.get("area") or None
+    razza_id = request.args.get("razza_id") or None
+    evento = request.args.get("evento") or None
+    return render_template(
+        "log_attivita.html",
+        eventi=log_attivita_eventi(db, area=area, razza_id=int(razza_id) if razza_id else None, evento=evento),
+        razze=razze,
+        aree=AREA_INFO,
+        eventi_label=EVENTO_LABEL_FILTRO,
+        filtri={"area": area or "", "razza_id": razza_id or "", "evento": evento or ""},
+    )
 
 
 @app.route("/razze")
