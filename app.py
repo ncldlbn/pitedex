@@ -935,5 +935,22 @@ def razza_modifica(razza_id):
     return render_template("razza_form.html", razza=razza)
 
 
+@app.route("/razze/<int:razza_id>/elimina", methods=["POST"])
+def razza_elimina(razza_id):
+    db = get_db()
+    tabelle_eventi = ("eventi_incubatrice", "eventi_pulcinaia", "eventi_pollaio", "eventi_registro_uova")
+    ha_eventi = any(
+        db.execute(f"SELECT 1 FROM {tabella} WHERE razza_id = ? LIMIT 1", (razza_id,)).fetchone()
+        for tabella in tabelle_eventi
+    )
+    if ha_eventi:
+        flash("Non puoi eliminare una razza con eventi già registrati.")
+    else:
+        db.execute("DELETE FROM razze WHERE id = ?", (razza_id,))
+        db.commit()
+        flash("Razza eliminata")
+    return redirect(url_for("razze_lista"))
+
+
 if __name__ == "__main__":
     app.run(debug=True)

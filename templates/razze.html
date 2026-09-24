@@ -14,7 +14,13 @@
             {% for r in razze %}
             <tr>
                 <td>{{ r.nome }}</td>
-                <td><a href="{{ url_for('razza_modifica', razza_id=r.id) }}">Modifica</a></td>
+                <td>
+                    <a href="{{ url_for('razza_modifica', razza_id=r.id) }}">Modifica</a>
+                    ·
+                    <form method="post" action="{{ url_for('razza_elimina', razza_id=r.id) }}" class="form-inline" onsubmit="return confirm('Eliminare la razza {{ r.nome }}? L\'operazione non è reversibile.');">
+                        <button type="submit" class="link-button">Elimina</button>
+                    </form>
+                </td>
             </tr>
             {% else %}
             <tr><td colspan="2" class="empty">Nessuna razza configurata.</td></tr>
