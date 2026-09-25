@@ -3,6 +3,16 @@ CREATE TABLE IF NOT EXISTS razze (
     nome TEXT NOT NULL UNIQUE
 );
 
+-- Riga singola (id sempre 1): preferenze di visualizzazione delle schede,
+-- condivise da tutte le pagine a griglia (Incubazione/Pulcinaia/Pollaio/Uova)
+-- e modificabili dalla pagina Impostazioni.
+CREATE TABLE IF NOT EXISTS impostazioni_vista (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    colonne_mobile INTEGER NOT NULL DEFAULT 1,
+    colonne_desktop INTEGER NOT NULL DEFAULT 3,
+    ordine TEXT NOT NULL DEFAULT 'alfa-asc'
+);
+
 -- Log di eventi per l'incubatrice. Nessun concetto di lotto: le uova con la
 -- stessa razza sono fungibili fra loro, il pool è a livello di razza (coerente
 -- con "tasso di schiusa per singola razza" come obiettivo di monitoraggio).

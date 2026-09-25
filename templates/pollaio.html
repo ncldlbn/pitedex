@@ -1,31 +1,7 @@
 {% extends "base.html" %}
+{% import "_macros.html" as macros %}
 {% block content %}
-<div class="azioni-bar">
-    <div class="controlli-vista">
-        <label class="controllo-colonne">
-            Colonne
-            <input type="range" id="colonne-slider" min="1" max="4" value="3">
-            <span id="colonne-valore">3</span>
-        </label>
-        <label class="controllo-ordine">
-            Ordina per
-            <select id="ordine-select">
-                <option value="numero-desc">Più numerosi</option>
-                <option value="numero-asc">Meno numerosi</option>
-                <option value="alfa-asc" selected>A → Z</option>
-                <option value="alfa-desc">Z → A</option>
-            </select>
-        </label>
-        <label class="controllo-vista">
-            Vista
-            <select id="vista-select">
-                <option value="destinazione" selected>Destinazione d'uso</option>
-                <option value="sesso">Sesso</option>
-                <option value="anno_nascita">Anno di nascita</option>
-            </select>
-        </label>
-    </div>
-</div>
+{{ macros.controlli_vista(vista, con_vista_pollaio=True) }}
 
 <div class="box-grid">
     {% for razza in composizione_razze %}
@@ -69,47 +45,4 @@
     <p class="empty">Nessun capo registrato.</p>
     {% endfor %}
 </div>
-
-<script>
-    (function () {
-        const griglia = document.querySelector(".box-grid");
-        const sliderColonne = document.getElementById("colonne-slider");
-        const valoreColonne = document.getElementById("colonne-valore");
-        const selectOrdine = document.getElementById("ordine-select");
-        const selectVista = document.getElementById("vista-select");
-        if (!griglia || !sliderColonne || !selectOrdine || !selectVista) return;
-
-        function aggiornaColonne() {
-            griglia.style.setProperty("--colonne", sliderColonne.value);
-            valoreColonne.textContent = sliderColonne.value;
-        }
-
-        function aggiornaOrdine() {
-            const schede = Array.from(griglia.children).filter(el => el.classList.contains("card"));
-            const criterio = selectOrdine.value;
-            schede.sort((a, b) => {
-                if (criterio === "numero-desc") return b.dataset.totale - a.dataset.totale;
-                if (criterio === "numero-asc") return a.dataset.totale - b.dataset.totale;
-                if (criterio === "alfa-desc") return b.dataset.nome.localeCompare(a.dataset.nome, "it");
-                return a.dataset.nome.localeCompare(b.dataset.nome, "it"); // alfa-asc
-            });
-            schede.forEach(el => griglia.appendChild(el));
-        }
-
-        function aggiornaVista() {
-            const vista = selectVista.value;
-            document.querySelectorAll(".vista-blocco").forEach(el => {
-                el.style.display = (vista !== "sesso" && el.dataset.vista === vista) ? "" : "none";
-            });
-        }
-
-        sliderColonne.value = window.innerWidth <= 720 ? 1 : 3;
-        sliderColonne.addEventListener("input", aggiornaColonne);
-        selectOrdine.addEventListener("change", aggiornaOrdine);
-        selectVista.addEventListener("change", aggiornaVista);
-        aggiornaColonne();
-        aggiornaVista();
-    })();
-</script>
-
 {% endblock %}

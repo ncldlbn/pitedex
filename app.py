@@ -131,6 +131,24 @@ def get_db():
     return g.db
 
 
+ORDINE_OPZIONI = {
+    "numero-desc": "Più numerosi",
+    "numero-asc": "Meno numerosi",
+    "alfa-asc": "A → Z",
+    "alfa-desc": "Z → A",
+}
+
+
+@app.context_processor
+def inject_impostazioni_vista():
+    if request.endpoint in ("login", "static") or request.endpoint is None:
+        return {}
+    riga = get_db().execute(
+        "SELECT colonne_mobile, colonne_desktop, ordine FROM impostazioni_vista WHERE id = 1"
+    ).fetchone()
+    return {"vista": dict(riga)}
+
+
 @app.teardown_appcontext
 def close_db(exception=None):
     db = g.pop("db", None)
@@ -146,6 +164,8 @@ def init_db():
 
     if db.execute("SELECT COUNT(*) FROM razze").fetchone()[0] == 0:
         db.executemany("INSERT INTO razze (nome) VALUES (?)", [(nome,) for nome in RAZZE_SEED])
+
+    db.execute("INSERT OR IGNORE INTO impostazioni_vista (id) VALUES (1)")
 
     db.commit()
     db.close()
@@ -874,6 +894,11 @@ def proiezioni():
     return render_template("proiezioni.html")
 
 
+@app.route("/manuale")
+def manuale():
+    return render_template("manuale.html")
+
+
 AREA_INFO = {
     "incubazione": ("🐣", "Incubazione"),
     "pulcinaia": ("🐤", "Pulcinaia"),
@@ -998,7 +1023,24 @@ def log_attivita():
 def razze_lista():
     db = get_db()
     razze = db.execute("SELECT * FROM razze ORDER BY nome").fetchall()
-    return render_template("razze.html", razze=razze)
+    return render_template("razze.html", razze=razze, ordine_opzioni=ORDINE_OPZIONI)
+
+
+@app.route("/impostazioni/vista", methods=["POST"])
+def impostazioni_vista_salva():
+    db = get_db()
+    colonne_mobile = max(1, min(4, int(request.form.get("colonne_mobile") or 1)))
+    colonne_desktop = max(1, min(4, int(request.form.get("colonne_desktop") or 3)))
+    ordine = request.form.get("ordine", "alfa-asc")
+    if ordine not in ORDINE_OPZIONI:
+        ordine = "alfa-asc"
+    db.execute(
+        "UPDATE impostazioni_vista SET colonne_mobile = ?, colonne_desktop = ?, ordine = ? WHERE id = 1",
+        (colonne_mobile, colonne_desktop, ordine),
+    )
+    db.commit()
+    flash("Impostazioni di visualizzazione aggiornate")
+    return redirect(url_for("razze_lista"))
 
 
 @app.route("/razze/nuova", methods=["GET", "POST"])

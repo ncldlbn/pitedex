@@ -1,7 +1,28 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="page-title">Razze</h1>
+<h1 class="page-title">Impostazioni</h1>
 
+<h2 class="section-title">Visualizzazione</h2>
+<div class="card card-form" style="margin-bottom: 2rem;">
+    <form method="post" action="{{ url_for('impostazioni_vista_salva') }}">
+        <label>Colonne su mobile
+            <input type="number" name="colonne_mobile" min="1" max="4" value="{{ vista.colonne_mobile }}" required>
+        </label>
+        <label>Colonne su desktop
+            <input type="number" name="colonne_desktop" min="1" max="4" value="{{ vista.colonne_desktop }}" required>
+        </label>
+        <label>Ordine predefinito delle schede
+            <select name="ordine">
+                {% for k, v in ordine_opzioni.items() %}
+                <option value="{{ k }}" {{ 'selected' if vista.ordine == k else '' }}>{{ v }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit">Salva</button>
+    </form>
+</div>
+
+<h2 class="section-title">Razze</h2>
 <div class="card">
     <table>
         <thead>
