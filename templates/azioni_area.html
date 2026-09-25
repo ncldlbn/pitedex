@@ -1,9 +1,0 @@
-{% extends "base.html" %}
-{% import "_macros.html" as macros %}
-{% block content %}
-<p style="margin: 0 0 1.25rem;">
-    <a class="button-link button-link-secondary" href="{{ url_for('index') }}">← Azioni rapide</a>
-</p>
-<h1 class="page-title">{{ gruppo.icona }} {{ gruppo.nome }}</h1>
-{{ macros.azioni_lista(gruppo.azioni) }}
-{% endblock %}

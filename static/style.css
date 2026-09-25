@@ -566,9 +566,10 @@ button:hover {
 /* Azioni rapide (home) */
 
 .azioni-home-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 1rem;
+    max-width: 480px;
 }
 
 .azioni-box {
@@ -580,17 +581,11 @@ button:hover {
 }
 
 .azioni-box-titolo {
-    display: block;
     font-family: var(--font-display);
     font-weight: 600;
     font-size: 1.1rem;
     color: var(--text-primary);
-    text-decoration: none;
     margin: 0 0 0.9rem;
-}
-
-.azioni-box-titolo:hover {
-    color: var(--accent);
 }
 
 .azioni-lista {
@@ -616,12 +611,6 @@ button:hover {
     background: var(--badge-bg);
     border-color: var(--accent);
     color: var(--accent);
-}
-
-@media (max-width: 640px) {
-    .azioni-home-grid {
-        grid-template-columns: 1fr;
-    }
 }
 
 /* Login */

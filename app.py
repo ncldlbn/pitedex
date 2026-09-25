@@ -118,13 +118,6 @@ def index():
     return render_template("index.html", gruppi=gruppi)
 
 
-@app.route("/azioni/<area>")
-def azioni_area(area):
-    if area not in AZIONI_RAPIDE:
-        abort(404)
-    return render_template("azioni_area.html", gruppo=_azioni_rapide_gruppo(area))
-
-
 @app.context_processor
 def inject_oggi():
     return {"oggi_iso": date.today().isoformat()}

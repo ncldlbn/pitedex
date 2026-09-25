@@ -18,9 +18,9 @@
 
 {% macro azioni_box(gruppo) %}
 <div class="azioni-box">
-    <a class="azioni-box-titolo" href="{{ url_for('azioni_area', area=gruppo.chiave) }}">
+    <div class="azioni-box-titolo">
         <span aria-hidden="true">{{ gruppo.icona }}</span> {{ gruppo.nome }}
-    </a>
+    </div>
     {{ azioni_lista(gruppo.azioni) }}
 </div>
 {% endmacro %}
