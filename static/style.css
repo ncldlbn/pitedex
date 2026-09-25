@@ -635,6 +635,134 @@ button:hover {
     color: var(--text-primary);
 }
 
+/* Statistiche */
+
+.statistiche-griglia {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.grafico-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.1rem;
+    margin: 0 0 0.9rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.legenda-voce {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.legenda-chiave {
+    display: inline-block;
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+}
+
+.legenda-chiave.legenda-uscita {
+    background: repeating-linear-gradient(to right, var(--accent-uscita) 0 4px, transparent 4px 7px);
+}
+
+.grafico-contenitore {
+    position: relative;
+    width: 100%;
+}
+
+.grafico-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.grafico-griglia {
+    stroke: var(--border);
+    stroke-width: 1;
+}
+
+.grafico-asse-testo {
+    font-family: var(--font-body);
+    font-size: 10px;
+    fill: var(--text-muted);
+}
+
+.grafico-linea {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.grafico-linea-tratteggiata {
+    stroke-dasharray: 7 5;
+}
+
+.grafico-punto {
+    stroke: var(--bg-surface);
+    stroke-width: 2;
+}
+
+.grafico-etichetta-diretta {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--text-primary);
+}
+
+.grafico-crosshair {
+    stroke: var(--text-muted);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+}
+
+.grafico-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 0.5rem 0.65rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.grafico-tooltip-data {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.grafico-tooltip-riga {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-secondary);
+}
+
+.grafico-tooltip-chiave {
+    display: inline-block;
+    width: 10px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+    .statistiche-griglia {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Login */
 
 .login-page {

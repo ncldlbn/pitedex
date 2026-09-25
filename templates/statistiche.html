@@ -1,5 +1,112 @@
 {% extends "base.html" %}
 {% block content %}
 <h1 class="page-title">Statistiche</h1>
-<p class="hint">Pagina in arrivo.</p>
+
+<h2 class="section-title">Andamento popolazione</h2>
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="grafico-legenda">
+        <span class="legenda-voce"><span class="legenda-chiave"></span>Pollaio</span>
+        <span class="legenda-voce"><span class="legenda-chiave legenda-uscita"></span>Pulcinaia</span>
+    </div>
+    <div id="grafico-popolazione" class="grafico-contenitore"></div>
+</div>
+
+<h2 class="section-title">Uova raccolte e vendute</h2>
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="grafico-legenda">
+        <span class="legenda-voce"><span class="legenda-chiave"></span>Raccolta</span>
+        <span class="legenda-voce"><span class="legenda-chiave legenda-uscita"></span>Vendita</span>
+    </div>
+    <div id="grafico-uova" class="grafico-contenitore"></div>
+</div>
+
+<div class="statistiche-griglia">
+    <div>
+        <h2 class="section-title">Tasso di schiusa</h2>
+        <div class="card">
+            <div class="barre-orizzontali">
+                {% for r in tasso_schiusa %}
+                <div class="barra-riga">
+                    <span class="barra-etichetta">{{ r.razza }}</span>
+                    <span class="barra-traccia">
+                        <span class="barra-riempimento" style="width: {{ r.percento }}%;"></span>
+                    </span>
+                    <span class="barra-valore">{{ r.tasso }}%</span>
+                </div>
+                {% else %}
+                <p class="hint">Nessun dato disponibile.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div>
+        <h2 class="section-title">Sopravvivenza in pulcinaia</h2>
+        <div class="card">
+            <div class="barre-orizzontali">
+                {% for r in tasso_sopravvivenza %}
+                <div class="barra-riga">
+                    <span class="barra-etichetta">{{ r.razza }}</span>
+                    <span class="barra-traccia">
+                        <span class="barra-riempimento" style="width: {{ r.percento }}%;"></span>
+                    </span>
+                    <span class="barra-valore">{{ r.tasso }}%</span>
+                </div>
+                {% else %}
+                <p class="hint">Nessun dato disponibile.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div>
+        <h2 class="section-title">Capi venduti per razza</h2>
+        <div class="card">
+            <div class="barre-orizzontali">
+                {% for r in capi_venduti %}
+                <div class="barra-riga">
+                    <span class="barra-etichetta">{{ r.razza }}</span>
+                    <span class="barra-traccia">
+                        <span class="barra-riempimento" style="width: {{ r.percento }}%;"></span>
+                    </span>
+                    <span class="barra-valore">{{ r.valore }}</span>
+                </div>
+                {% else %}
+                <p class="hint">Nessun dato disponibile.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div>
+        <h2 class="section-title">Ricavo medio per capo venduto</h2>
+        <div class="card">
+            <div class="barre-orizzontali">
+                {% for r in ricavo_medio %}
+                <div class="barra-riga">
+                    <span class="barra-etichetta">{{ r.razza }}</span>
+                    <span class="barra-traccia">
+                        <span class="barra-riempimento" style="width: {{ r.percento }}%;"></span>
+                    </span>
+                    <span class="barra-valore">€ {{ '%.2f'|format(r.valore) }}</span>
+                </div>
+                {% else %}
+                <p class="hint">Nessun dato disponibile.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='statistiche.js') }}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        renderLineChart(document.getElementById("grafico-popolazione"), [
+            {etichetta: "Pollaio", colore: "var(--accent)", punti: {{ andamento_popolazione.pollaio|tojson }}},
+            {etichetta: "Pulcinaia", colore: "var(--accent-uscita)", tratteggiata: true, punti: {{ andamento_popolazione.pulcinaia|tojson }}}
+        ], {suffisso: " capi"});
+
+        renderLineChart(document.getElementById("grafico-uova"), [
+            {etichetta: "Raccolta", colore: "var(--accent)", punti: {{ uova_nel_tempo.raccolta|tojson }}},
+            {etichetta: "Vendita", colore: "var(--accent-uscita)", tratteggiata: true, punti: {{ uova_nel_tempo.vendita|tojson }}}
+        ], {suffisso: " uova"});
+    });
+</script>
 {% endblock %}

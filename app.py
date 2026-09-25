@@ -880,9 +880,136 @@ def bilancio():
     return render_template("bilancio.html")
 
 
+def _serie_cumulativa(righe_delta):
+    """[(data, delta)] ordinate per data -> [{"data":..., "totale":...}] con
+    somma cumulata, per ricostruire un andamento nel tempo da un log eventi."""
+    punti = []
+    totale = 0
+    for r in righe_delta:
+        totale += r["delta"]
+        punti.append({"data": r["data"], "totale": totale})
+    return punti
+
+
+def andamento_popolazione(db):
+    """Andamento capi nel tempo per Pollaio e Pulcinaia, per somma cumulata
+    degli eventi (stesso principio usato per le viste storiche del Pollaio)."""
+    pollaio = db.execute(
+        """SELECT data, SUM(CASE
+                     WHEN evento IN ('acquisto','promozione','cambio_destinazione_entrata') THEN numero_capi
+                     WHEN evento IN ('vendita','perdita','macellazione','cambio_destinazione_uscita') THEN -numero_capi
+                   END) AS delta
+           FROM eventi_pollaio GROUP BY data ORDER BY data"""
+    ).fetchall()
+    pulcinaia = db.execute(
+        """SELECT data, SUM(CASE WHEN evento IN ('entrata','acquisto') THEN numero_capi ELSE -numero_capi END) AS delta
+           FROM eventi_pulcinaia GROUP BY data ORDER BY data"""
+    ).fetchall()
+    return {
+        "pollaio": _serie_cumulativa(pollaio),
+        "pulcinaia": _serie_cumulativa(pulcinaia),
+    }
+
+
+def uova_nel_tempo(db):
+    """Uova raccolte e vendute per data (non cumulato: due serie di flusso)."""
+    raccolta = db.execute(
+        "SELECT data, SUM(numero_uova) AS n FROM eventi_registro_uova WHERE evento = 'raccolta' GROUP BY data ORDER BY data"
+    ).fetchall()
+    vendita = db.execute(
+        "SELECT data, SUM(numero_uova) AS n FROM eventi_registro_uova WHERE evento = 'vendita' GROUP BY data ORDER BY data"
+    ).fetchall()
+    return {
+        "raccolta": [{"data": r["data"], "totale": r["n"]} for r in raccolta],
+        "vendita": [{"data": r["data"], "totale": r["n"]} for r in vendita],
+    }
+
+
+def tasso_schiusa_per_razza(db):
+    """% di uova impostate in incubatrice arrivate a trasferimento in pulcinaia, per razza."""
+    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    righe = db.execute(
+        """SELECT razza_id,
+                  SUM(CASE WHEN evento IN ('entrata','acquisto') THEN numero_uova ELSE 0 END) AS impostate,
+                  SUM(CASE WHEN evento = 'trasferimento' THEN numero_uova ELSE 0 END) AS trasferite
+           FROM eventi_incubatrice GROUP BY razza_id"""
+    ).fetchall()
+    per_razza = {r["razza_id"]: r for r in righe}
+    risultato = []
+    for razza in razze:
+        r = per_razza.get(razza["id"])
+        if not r or not r["impostate"]:
+            continue
+        tasso = round(r["trasferite"] / r["impostate"] * 100, 1)
+        risultato.append({"razza": razza["nome"], "tasso": tasso, "percento": min(tasso, 100)})
+    return risultato
+
+
+def tasso_sopravvivenza_per_razza(db):
+    """% di pulcini arrivati in pulcinaia (entrata/acquisto) promossi a pollaio, per razza."""
+    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    righe = db.execute(
+        """SELECT razza_id,
+                  SUM(CASE WHEN evento IN ('entrata','acquisto') THEN numero_capi ELSE 0 END) AS arrivati,
+                  SUM(CASE WHEN evento = 'promozione' THEN numero_capi ELSE 0 END) AS promossi
+           FROM eventi_pulcinaia GROUP BY razza_id"""
+    ).fetchall()
+    per_razza = {r["razza_id"]: r for r in righe}
+    risultato = []
+    for razza in razze:
+        r = per_razza.get(razza["id"])
+        if not r or not r["arrivati"]:
+            continue
+        tasso = round(r["promossi"] / r["arrivati"] * 100, 1)
+        risultato.append({"razza": razza["nome"], "tasso": tasso, "percento": min(tasso, 100)})
+    return risultato
+
+
+def vendite_capi_per_razza(db):
+    """Capi venduti (Pollaio + Pulcinaia) e ricavo medio per capo, per razza."""
+    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    righe = db.execute(
+        """SELECT razza_id, SUM(numero_capi) AS capi, SUM(COALESCE(prezzo_vendita_totale, 0)) AS ricavo
+           FROM (
+               SELECT razza_id, numero_capi, prezzo_vendita_totale FROM eventi_pollaio WHERE evento = 'vendita'
+               UNION ALL
+               SELECT razza_id, numero_capi, prezzo_vendita_totale FROM eventi_pulcinaia WHERE evento = 'vendita'
+           )
+           GROUP BY razza_id"""
+    ).fetchall()
+    per_razza = {r["razza_id"]: r for r in righe}
+    capi_per_razza = []
+    ricavo_per_razza = []
+    for razza in razze:
+        r = per_razza.get(razza["id"])
+        if not r or not r["capi"]:
+            continue
+        capi_per_razza.append({"razza": razza["nome"], "valore": r["capi"]})
+        ricavo_per_razza.append({"razza": razza["nome"], "valore": round(r["ricavo"] / r["capi"], 2)})
+
+    massimo_capi = max((r["valore"] for r in capi_per_razza), default=0)
+    for r in capi_per_razza:
+        r["percento"] = (r["valore"] / massimo_capi * 100) if massimo_capi else 0
+    massimo_ricavo = max((r["valore"] for r in ricavo_per_razza), default=0)
+    for r in ricavo_per_razza:
+        r["percento"] = (r["valore"] / massimo_ricavo * 100) if massimo_ricavo else 0
+
+    return {"capi": capi_per_razza, "ricavo_medio": ricavo_per_razza}
+
+
 @app.route("/statistiche")
 def statistiche():
-    return render_template("statistiche.html")
+    db = get_db()
+    vendite = vendite_capi_per_razza(db)
+    return render_template(
+        "statistiche.html",
+        andamento_popolazione=andamento_popolazione(db),
+        uova_nel_tempo=uova_nel_tempo(db),
+        tasso_schiusa=tasso_schiusa_per_razza(db),
+        tasso_sopravvivenza=tasso_sopravvivenza_per_razza(db),
+        capi_venduti=vendite["capi"],
+        ricavo_medio=vendite["ricavo_medio"],
+    )
 
 
 @app.route("/proiezioni")
