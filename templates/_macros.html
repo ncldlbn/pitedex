@@ -9,23 +9,9 @@
 {% endmacro %}
 
 {% macro controlli_vista(vista, con_vista_pollaio=False) %}
+{% if con_vista_pollaio %}
 <div class="azioni-bar">
     <div class="controlli-vista">
-        <label class="controllo-colonne">
-            Colonne
-            <input type="range" id="colonne-slider" min="1" max="4" value="{{ vista.colonne_desktop }}">
-            <span id="colonne-valore">{{ vista.colonne_desktop }}</span>
-        </label>
-        <label class="controllo-ordine">
-            Ordina per
-            <select id="ordine-select">
-                <option value="numero-desc" {{ 'selected' if vista.ordine == 'numero-desc' else '' }}>Più numerosi</option>
-                <option value="numero-asc" {{ 'selected' if vista.ordine == 'numero-asc' else '' }}>Meno numerosi</option>
-                <option value="alfa-asc" {{ 'selected' if vista.ordine == 'alfa-asc' else '' }}>A → Z</option>
-                <option value="alfa-desc" {{ 'selected' if vista.ordine == 'alfa-desc' else '' }}>Z → A</option>
-            </select>
-        </label>
-        {% if con_vista_pollaio %}
         <label class="controllo-vista">
             Vista
             <select id="vista-select">
@@ -34,13 +20,14 @@
                 <option value="anno_nascita">Anno di nascita</option>
             </select>
         </label>
-        {% endif %}
     </div>
 </div>
+{% endif %}
 <script src="{{ url_for('static', filename='vista-controlli.js') }}"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        initControlliVista({{ vista.colonne_mobile }}, {{ vista.colonne_desktop }});
+        applicaVista({{ vista.colonne_mobile }}, {{ vista.colonne_desktop }}, {{ vista.ordine|tojson }});
+        initVistaSelect();
     });
 </script>
 {% endmacro %}

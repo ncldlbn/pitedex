@@ -549,22 +549,9 @@ button:hover {
     white-space: nowrap;
 }
 
-.controlli-vista input[type="range"] {
-    width: 100px;
-    padding: 0;
-    border: none;
-    background: none;
-    accent-color: var(--accent);
-}
-
 .controlli-vista select {
     padding: 0.35rem 0.5rem;
     font-size: 0.85rem;
-}
-
-#colonne-valore {
-    font-variant-numeric: tabular-nums;
-    min-width: 1ch;
 }
 
 /* Azioni rapide (home) */
