@@ -12,6 +12,23 @@
 <button type="button" class="{{ classe }}" onclick="document.getElementById('{{ target_id }}').showModal()">{{ label }}</button>
 {% endmacro %}
 
+{% macro azioni_griglia(azioni) %}
+<div class="azioni-griglia">
+    {% for azione in azioni %}
+    <a class="azione-tile" href="{{ azione.url }}">{{ azione.etichetta }}</a>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro azioni_box(gruppo) %}
+<div class="azioni-box">
+    <a class="azioni-box-titolo" href="{{ url_for('azioni_area', area=gruppo.chiave) }}">
+        <span aria-hidden="true">{{ gruppo.icona }}</span> {{ gruppo.nome }}
+    </a>
+    {{ azioni_griglia(gruppo.azioni) }}
+</div>
+{% endmacro %}
+
 {% macro modal(id, titolo, azione=None) %}
 <dialog id="{{ id }}" class="modal">
     <div class="modal-header">

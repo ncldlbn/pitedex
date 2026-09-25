@@ -75,6 +75,14 @@
 
 <script>
     (function () {
+        const apri = new URLSearchParams(location.search).get("apri");
+        if (apri) {
+            const modale = document.getElementById("modal-" + apri);
+            if (modale) modale.showModal();
+        }
+    })();
+
+    (function () {
         const evento = document.getElementById("entrata-evento");
         const prezzoLabel = document.getElementById("entrata-prezzo-label");
         function aggiornaEntrata() {

@@ -3,7 +3,7 @@ import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 
-from flask import Flask, g, redirect, render_template, request, session, url_for, flash
+from flask import Flask, abort, g, redirect, render_template, request, session, url_for, flash
 
 DB_PATH = Path(__file__).parent / "pollaio.db"
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
@@ -29,6 +29,59 @@ TIPI_USCITA_POLLAIO = {
 }
 
 RAZZE_SEED = ["ISA Brown", "Australorp", "Plymouth Rock", "Pepoi", "Moroseta / Silkie"]
+
+# Azioni rapide (home "/"): un box per area, ognuno con l'elenco di tutte le
+# azioni di ingresso/uscita di quell'area. "apri" è l'id (senza prefisso
+# "modal-") del <dialog> da aprire automaticamente sulla pagina di
+# destinazione, via query string (?apri=...) — None per le azioni che hanno
+# già una pagina propria invece di un popup (Registro uova).
+AZIONI_RAPIDE = {
+    "incubazione": {
+        "icona": "🐣", "nome": "Incubazione", "endpoint_pagina": "incubazione_lista",
+        "azioni": [
+            {"etichetta": "Registra ingresso", "apri": "entrata"},
+            {"etichetta": "Registra perdita", "apri": "perdita"},
+        ],
+    },
+    "pulcinaia": {
+        "icona": "🐤", "nome": "Pulcinaia", "endpoint_pagina": "pulcinaia_lista",
+        "azioni": [
+            {"etichetta": "Registra ingresso", "apri": "entrata"},
+            {"etichetta": "Registra perdita", "apri": "perdita"},
+            {"etichetta": "Registra vendita", "apri": "vendita"},
+        ],
+    },
+    "pollaio": {
+        "icona": "🐔", "nome": "Pollaio", "endpoint_pagina": "pollaio_lista",
+        "azioni": [
+            {"etichetta": "Registra ingresso", "apri": "entrata"},
+            {"etichetta": "Registra perdita", "apri": "perdita"},
+            {"etichetta": "Registra vendita", "apri": "vendita"},
+            {"etichetta": "Registra macellazione", "apri": "macellazione"},
+            {"etichetta": "Cambia destinazione", "apri": "cambio-destinazione"},
+        ],
+    },
+    "uova": {
+        "icona": "🥚", "nome": "Uova", "endpoint_pagina": "registro_uova_lista",
+        "azioni": [
+            {"etichetta": "Registra raccolta", "endpoint": "registro_uova_raccolta"},
+            {"etichetta": "Registra vendita", "endpoint": "registro_uova_vendita"},
+        ],
+    },
+}
+
+
+def _azioni_rapide_gruppo(chiave):
+    info = AZIONI_RAPIDE[chiave]
+    azioni = []
+    for a in info["azioni"]:
+        if a.get("apri"):
+            url = url_for(info["endpoint_pagina"], apri=a["apri"])
+        else:
+            url = url_for(a["endpoint"])
+        azioni.append({"etichetta": a["etichetta"], "url": url})
+    return {"chiave": chiave, "icona": info["icona"], "nome": info["nome"], "azioni": azioni}
+
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-insecure-change-me")
@@ -61,6 +114,19 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+@app.route("/")
+def index():
+    gruppi = [_azioni_rapide_gruppo(chiave) for chiave in AZIONI_RAPIDE]
+    return render_template("index.html", gruppi=gruppi)
+
+
+@app.route("/azioni/<area>")
+def azioni_area(area):
+    if area not in AZIONI_RAPIDE:
+        abort(404)
+    return render_template("azioni_area.html", gruppo=_azioni_rapide_gruppo(area))
 
 
 @app.context_processor
@@ -340,13 +406,13 @@ def pollaio_razza_dettaglio(razza_id):
     return render_template("razza_dettaglio.html", razza=razza)
 
 
-@app.route("/")
-def index():
+@app.route("/pollaio")
+def pollaio_lista():
     db = get_db()
     elenco_razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
 
     return render_template(
-        "index.html",
+        "pollaio.html",
         elenco_razze=elenco_razze,
         destinazioni=DESTINAZIONI,
         composizione_razze=pollaio_composizione_per_razza(db),
@@ -576,7 +642,7 @@ def pollaio_nuova():
         pool_pulcinaia = _pulcinaia_pool(db, razza_id, data_nascita)
         if pool_pulcinaia is None or numero_capi < 1 or numero_capi > pool_pulcinaia["numero_capi_attuale"]:
             flash("Numero di pulcini non disponibile in quel gruppo di Pulcinaia.")
-            return redirect(url_for("index"))
+            return redirect(url_for("pollaio_lista"))
         anno_nascita = date.fromisoformat(data_nascita).year
 
         db.execute(
@@ -603,7 +669,7 @@ def pollaio_nuova():
         flash(f"Aggiunti {numero_capi} capi in pollaio (acquisto esterno)")
 
     db.commit()
-    return redirect(url_for("index"))
+    return redirect(url_for("pollaio_lista"))
 
 
 def _pollaio_pool_dal_form(db, form):
@@ -629,7 +695,7 @@ def pollaio_uscita():
 
     if pool is None or numero_capi < 1 or numero_capi > pool["numero_capi_attuale"]:
         flash("Numero di capi non disponibile in quel gruppo.")
-        return redirect(url_for("index"))
+        return redirect(url_for("pollaio_lista"))
 
     oggi = date.today().isoformat()
     prezzo_vendita = request.form.get("prezzo_vendita") or None if evento == "vendita" else None
@@ -645,7 +711,7 @@ def pollaio_uscita():
     )
     db.commit()
     flash(f"Registrata {TIPI_USCITA_POLLAIO[evento].lower()}: {numero_capi} capi")
-    return redirect(url_for("index"))
+    return redirect(url_for("pollaio_lista"))
 
 
 @app.route("/pollaio/cambio-destinazione", methods=["POST"])
@@ -658,10 +724,10 @@ def pollaio_cambio_destinazione():
 
     if pool is None or numero_capi < 1 or numero_capi > pool["numero_capi_attuale"]:
         flash("Numero di capi non disponibile in quel gruppo.")
-        return redirect(url_for("index"))
+        return redirect(url_for("pollaio_lista"))
     if nuova_destinazione == pool["destinazione"]:
         flash("La nuova destinazione deve essere diversa da quella attuale.")
-        return redirect(url_for("index"))
+        return redirect(url_for("pollaio_lista"))
 
     oggi = date.today().isoformat()
     comuni = (pool["razza_id"], oggi, numero_capi, pool["sesso"], pool["anno_nascita"])
@@ -684,7 +750,7 @@ def pollaio_cambio_destinazione():
         f"Cambiata destinazione di {numero_capi} capi: "
         f"{DESTINAZIONI[pool['destinazione']]} → {DESTINAZIONI[nuova_destinazione]}"
     )
-    return redirect(url_for("index"))
+    return redirect(url_for("pollaio_lista"))
 
 
 def registro_uova_per_razza(db):

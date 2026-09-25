@@ -55,6 +55,8 @@ body {
     font-weight: 600;
     font-size: 1.25rem;
     letter-spacing: 0.01em;
+    color: inherit;
+    text-decoration: none;
 }
 
 .navbar-logo {
@@ -595,6 +597,72 @@ dialog.modal::backdrop {
 
 dialog.modal form {
     padding: 0 1.25rem 1.25rem;
+}
+
+/* Azioni rapide (home) */
+
+.azioni-home-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.azioni-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 1.1rem;
+}
+
+.azioni-box-titolo {
+    display: block;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    margin: 0 0 0.9rem;
+}
+
+.azioni-box-titolo:hover {
+    color: var(--accent);
+}
+
+.azioni-griglia {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+}
+
+.azione-tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    aspect-ratio: 1;
+    padding: 0.75rem;
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1.25;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.azione-tile:hover {
+    background: var(--badge-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+@media (max-width: 640px) {
+    .azioni-home-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Login */

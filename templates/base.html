@@ -12,9 +12,9 @@
 </head>
 <body>
     <header class="navbar">
-        <div class="navbar-brand">
+        <a href="{{ url_for('index') }}" class="navbar-brand">
             <img src="{{ url_for('static', filename='img/pitedex_title.png') }}" alt="Pitedex" class="navbar-title-img">
-        </div>
+        </a>
         <div class="navbar-date">{{ oggi }}</div>
     </header>
 
@@ -27,7 +27,7 @@
                 <a href="{{ url_for('pulcinaia_lista') }}" class="nav-link {{ 'active' if request.endpoint == 'pulcinaia_lista' else '' }}">
                     <span class="nav-icon" aria-hidden="true">🐤</span> Pulcinaia
                 </a>
-                <a href="{{ url_for('index') }}" class="nav-link {{ 'active' if request.endpoint == 'index' else '' }}">
+                <a href="{{ url_for('pollaio_lista') }}" class="nav-link {{ 'active' if request.endpoint == 'pollaio_lista' else '' }}">
                     <span class="nav-icon" aria-hidden="true">🐔</span> Pollaio
                 </a>
                 <a href="{{ url_for('registro_uova_lista') }}" class="nav-link {{ 'active' if request.endpoint in ['registro_uova_lista', 'registro_uova_raccolta', 'registro_uova_vendita'] else '' }}">

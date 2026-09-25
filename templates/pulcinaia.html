@@ -106,6 +106,14 @@
     const uovaInAttesaPerRazza = {{ uova_in_attesa_per_razza|tojson }};
 
     (function () {
+        const apri = new URLSearchParams(location.search).get("apri");
+        if (apri) {
+            const modale = document.getElementById("modal-" + apri);
+            if (modale) modale.showModal();
+        }
+    })();
+
+    (function () {
         const evento = document.getElementById("entrata-evento");
         const razzaSelect = document.getElementById("entrata-razza");
         const numeroCapi = document.getElementById("entrata-numero");
