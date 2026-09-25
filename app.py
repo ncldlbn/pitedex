@@ -35,19 +35,11 @@ RAZZE_SEED = ["ISA Brown", "Australorp", "Plymouth Rock", "Pepoi", "Moroseta / S
 # sua pagina di inserimento dati (non un popup su un'altra pagina) — le pagine
 # di Incubazione/Pulcinaia/Pollaio/Uova sono solo visualizzazione di stato.
 AZIONI_RAPIDE = {
-    "incubazione": {
-        "icona": "🐣", "nome": "Incubazione",
+    "uova": {
+        "icona": "🥚", "nome": "Uova",
         "azioni": [
-            {"etichetta": "Registra ingresso", "endpoint": "incubazione_nuova"},
-            {"etichetta": "Registra perdita", "endpoint": "incubazione_perdita"},
-        ],
-    },
-    "pulcinaia": {
-        "icona": "🐤", "nome": "Pulcinaia",
-        "azioni": [
-            {"etichetta": "Registra ingresso", "endpoint": "pulcinaia_nuova"},
-            {"etichetta": "Registra perdita", "endpoint": "pulcinaia_uscita", "params": {"tipo": "perdita"}},
-            {"etichetta": "Registra vendita", "endpoint": "pulcinaia_uscita", "params": {"tipo": "vendita"}},
+            {"etichetta": "Registra raccolta", "endpoint": "registro_uova_raccolta"},
+            {"etichetta": "Registra vendita", "endpoint": "registro_uova_vendita"},
         ],
     },
     "pollaio": {
@@ -60,11 +52,19 @@ AZIONI_RAPIDE = {
             {"etichetta": "Cambia destinazione", "endpoint": "pollaio_cambio_destinazione"},
         ],
     },
-    "uova": {
-        "icona": "🥚", "nome": "Uova",
+    "pulcinaia": {
+        "icona": "🐤", "nome": "Pulcinaia",
         "azioni": [
-            {"etichetta": "Registra raccolta", "endpoint": "registro_uova_raccolta"},
-            {"etichetta": "Registra vendita", "endpoint": "registro_uova_vendita"},
+            {"etichetta": "Registra ingresso", "endpoint": "pulcinaia_nuova"},
+            {"etichetta": "Registra perdita", "endpoint": "pulcinaia_uscita", "params": {"tipo": "perdita"}},
+            {"etichetta": "Registra vendita", "endpoint": "pulcinaia_uscita", "params": {"tipo": "vendita"}},
+        ],
+    },
+    "incubazione": {
+        "icona": "🐣", "nome": "Incubazione",
+        "azioni": [
+            {"etichetta": "Registra ingresso", "endpoint": "incubazione_nuova"},
+            {"etichetta": "Registra perdita", "endpoint": "incubazione_perdita"},
         ],
     },
 }
