@@ -635,6 +635,31 @@ button:hover {
     color: var(--text-primary);
 }
 
+/* Manuale */
+
+.manuale-testo {
+    max-width: 640px;
+}
+
+.manuale-testo p,
+.manuale-testo ul {
+    line-height: 1.6;
+    color: var(--text-primary);
+    margin: 0 0 1rem;
+}
+
+.manuale-testo ul {
+    padding-left: 1.25rem;
+}
+
+.manuale-testo li {
+    margin-bottom: 0.4rem;
+}
+
+.manuale-testo .section-title {
+    margin-top: 2rem;
+}
+
 /* Statistiche */
 
 .statistiche-griglia {

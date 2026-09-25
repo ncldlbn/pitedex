@@ -1,5 +1,81 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="page-title">Manuale</h1>
-<p class="hint">Pagina in arrivo.</p>
+<h1 class="page-title">❓ Manuale</h1>
+
+<div class="manuale-testo">
+
+<p class="hint" style="font-size: 1rem; margin: -0.5rem 0 1.75rem;">
+    PìteDex è il gestionale del tuo allevamento: tiene traccia di uova, pulcini e galline,
+    e ti dice sempre quanti capi hai e da dove vengono. Non devi calcolare nulla a mano:
+    ogni volta che registri un movimento, l'app aggiorna da sola tutti i numeri.
+</p>
+
+<h2 class="section-title">Le quattro aree</h2>
+<p>L'allevamento è diviso in quattro fasi, che seguono il percorso naturale degli animali:</p>
+<p>
+    🐣 <strong>Incubazione</strong> → 🐤 <strong>Pulcinaia</strong> → 🐔 <strong>Pollaio</strong>
+</p>
+<p>
+    Le uova fecondate vanno in <strong>Incubazione</strong>. Quando si schiudono, i pulcini passano in
+    <strong>Pulcinaia</strong> per crescere. Quando sono abbastanza grandi, entrano nel <strong>Pollaio</strong>,
+    dove restano fino a quando vengono vendute, macellate, o cambiano destinazione.
+    Parallela a queste tre c'è <strong>🥚 Uova</strong>, che segue le uova deposte dalle galline già nel pollaio
+    (destinate al consumo o alla vendita, non alla schiusa).
+</p>
+<p class="hint">
+    Ogni razza vive per conto suo: non serve indicare "in quale pollaio" o "in quale gabbia" — la razza stessa
+    identifica il gruppo.
+</p>
+
+<h2 class="section-title">Registrare un movimento</h2>
+<p>
+    Tocca il logo in alto per tornare alla <strong>home</strong>: qui trovi un riquadro per ognuna delle quattro aree,
+    con due pulsanti — uno per far <em>entrare</em> capi o uova, uno per farli <em>uscire</em>.
+</p>
+<ul>
+    <li><strong>Incubazione</strong>: Ingresso (nuove uova messe a incubare) · Uscita (uova perse, non schiuse)</li>
+    <li><strong>Pulcinaia</strong>: Ingresso (pulcini arrivati, dall'incubatrice o comprati) · Uscita (venduti o persi)</li>
+    <li><strong>Pollaio</strong>: Ingresso (capi arrivati, dalla pulcinaia o comprati) · Uscita (venduti, macellati o persi)</li>
+    <li><strong>Uova</strong>: Raccolta (uova deposte oggi) · Vendita</li>
+</ul>
+<p>
+    Nel modulo che si apre scegli il <strong>tipo</strong> esatto di movimento (es. per un'uscita dal Pollaio: vendita,
+    macellazione o perdita) e il <strong>gruppo</strong> da cui prendere i capi — l'app ti mostra sempre quanti ce ne
+    sono disponibili, così non rischi di far uscire più capi di quanti ce ne siano davvero.
+</p>
+<p>
+    Il Pollaio ha anche un terzo pulsante, <strong>Cambio destinazione d'uso</strong> (es. da "uova" a "carne"): non
+    è un'uscita, i capi restano nel pollaio ma cambiano ruolo.
+</p>
+
+<h2 class="section-title">Le pagine di ogni area</h2>
+<p>
+    Toccando il titolo di un riquadro nella home entri nella pagina dedicata (es. "Pollaio"), dove vedi lo stato
+    attuale: una scheda per ogni razza, con il numero di capi. Per il Pollaio, ogni scheda mostra anche la
+    suddivisione per maschi/femmine, e puoi scegliere come vedere il dettaglio (per destinazione d'uso, solo per
+    sesso, o per anno di nascita) dal menu "Vista" in alto.
+</p>
+
+<h2 class="section-title">Impostazioni</h2>
+<p>
+    Dall'icona ⚙️ in alto trovi le <strong>Razze</strong> (aggiungi, rinomina o elimina — una razza con movimenti già
+    registrati non si può eliminare, per non perdere lo storico) e le preferenze di <strong>visualizzazione</strong>:
+    quante colonne di schede mostrare su cellulare e su computer, e in che ordine appaiono.
+</p>
+
+<h2 class="section-title">Log attività</h2>
+<p>
+    L'icona 📜 apre l'elenco cronologico di <strong>tutti</strong> i movimenti registrati, in qualsiasi area, con la
+    possibilità di filtrare per area, razza o tipo di evento — utile per ritrovare o verificare qualcosa che hai
+    registrato in passato.
+</p>
+
+<h2 class="section-title">Bilancio, Statistiche, Proiezioni</h2>
+<p>
+    Nella barra laterale trovi tre pagine di riepilogo: <strong>Statistiche</strong> mostra grafici sull'andamento
+    dell'allevamento (popolazione nel tempo, tassi di schiusa e sopravvivenza, vendite). Bilancio e Proiezioni sono
+    ancora in arrivo.
+</p>
+
+</div>
 {% endblock %}
