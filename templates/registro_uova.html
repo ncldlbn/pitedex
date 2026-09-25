@@ -1,29 +1,64 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card">
-    <table>
-        <thead>
-            <tr>
-                <th>Razza</th>
-                <th>Uova in giacenza</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for g in gruppi %}
-            <tr>
-                <td>{{ g.razza }}</td>
-                <td class="num">{{ g.giacenza }}</td>
-            </tr>
-            {% else %}
-            <tr><td colspan="2" class="empty">Nessuna razza configurata.</td></tr>
-            {% endfor %}
-        </tbody>
-        <tfoot>
-            <tr>
-                <td><strong>Totale</strong></td>
-                <td class="num"><strong>{{ totale_giacenza }}</strong></td>
-            </tr>
-        </tfoot>
-    </table>
+<div class="azioni-bar">
+    <div class="controlli-vista">
+        <label class="controllo-colonne">
+            Colonne
+            <input type="range" id="colonne-slider" min="1" max="4" value="3">
+            <span id="colonne-valore">3</span>
+        </label>
+        <label class="controllo-ordine">
+            Ordina per
+            <select id="ordine-select">
+                <option value="numero-desc">Più numerosi</option>
+                <option value="numero-asc">Meno numerosi</option>
+                <option value="alfa-asc" selected>A → Z</option>
+                <option value="alfa-desc">Z → A</option>
+            </select>
+        </label>
+    </div>
 </div>
+
+<div class="box-grid">
+    {% for g in gruppi %}
+    <div class="card" data-totale="{{ g.giacenza }}" data-nome="{{ g.razza }}">
+        <div class="card-header">
+            <span class="razza-name">{{ g.razza }}</span>
+            <span class="razza-total razza-total-evidente">{{ g.giacenza }} uova</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    (function () {
+        const griglia = document.querySelector(".box-grid");
+        const sliderColonne = document.getElementById("colonne-slider");
+        const valoreColonne = document.getElementById("colonne-valore");
+        const selectOrdine = document.getElementById("ordine-select");
+        if (!griglia || !sliderColonne || !selectOrdine) return;
+
+        function aggiornaColonne() {
+            griglia.style.setProperty("--colonne", sliderColonne.value);
+            valoreColonne.textContent = sliderColonne.value;
+        }
+
+        function aggiornaOrdine() {
+            const schede = Array.from(griglia.children).filter(el => el.classList.contains("card"));
+            const criterio = selectOrdine.value;
+            schede.sort((a, b) => {
+                if (criterio === "numero-desc") return b.dataset.totale - a.dataset.totale;
+                if (criterio === "numero-asc") return a.dataset.totale - b.dataset.totale;
+                if (criterio === "alfa-desc") return b.dataset.nome.localeCompare(a.dataset.nome, "it");
+                return a.dataset.nome.localeCompare(b.dataset.nome, "it"); // alfa-asc
+            });
+            schede.forEach(el => griglia.appendChild(el));
+        }
+
+        sliderColonne.value = window.innerWidth <= 720 ? 1 : 3;
+        sliderColonne.addEventListener("input", aggiornaColonne);
+        selectOrdine.addEventListener("change", aggiornaOrdine);
+        aggiornaColonne();
+    })();
+</script>
 {% endblock %}

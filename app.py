@@ -808,8 +808,8 @@ def _giacenza_uova(db, razza_id):
 @app.route("/registro-uova")
 def registro_uova_lista():
     db = get_db()
-    gruppi, totale_giacenza = registro_uova_per_razza(db)
-    return render_template("registro_uova.html", gruppi=gruppi, totale_giacenza=totale_giacenza)
+    gruppi, _ = registro_uova_per_razza(db)
+    return render_template("registro_uova.html", gruppi=gruppi)
 
 
 @app.route("/registro-uova/raccolta", methods=["GET", "POST"])
@@ -867,6 +867,11 @@ def _salva_razza(db, form, razza_id=None):
 @app.route("/bilancio")
 def bilancio():
     return render_template("bilancio.html")
+
+
+@app.route("/proiezioni")
+def proiezioni():
+    return render_template("proiezioni.html")
 
 
 AREA_INFO = {
