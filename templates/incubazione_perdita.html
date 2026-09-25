@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block content %}
+{% call macros.form_page("Registra perdita in incubatrice") %}
+    <label>Razza
+        <select name="razza_id" id="perdita-razza" required>
+            {% for g in gruppi %}
+            <option value="{{ g.razza_id }}" data-max="{{ g.uova_in_attesa }}">{{ g.razza }} ({{ g.uova_in_attesa }} in attesa)</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Uova perse (infertili, problemi di incubazione, o pulcini non arrivati in pulcinaia)
+        <input type="number" name="numero_uova" id="perdita-numero" min="1" value="1" required>
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+<script>
+    (function () {
+        const perditaRazza = document.getElementById("perdita-razza");
+        const perditaNumero = document.getElementById("perdita-numero");
+        function aggiorna() {
+            const opzione = perditaRazza.selectedOptions[0];
+            perditaNumero.max = opzione ? opzione.dataset.max : 0;
+        }
+        perditaRazza.addEventListener("change", aggiorna);
+        aggiorna();
+    })();
+</script>
+{% endblock %}

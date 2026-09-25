@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block content %}
+{% call macros.form_page(tipo_label + " da Pollaio") %}
+    <input type="hidden" name="razza_id" id="gruppo-razza-id">
+    <input type="hidden" name="sesso" id="gruppo-sesso">
+    <input type="hidden" name="anno_nascita" id="gruppo-anno-nascita">
+    {% if con_destinazione %}
+    <input type="hidden" name="destinazione" id="gruppo-destinazione">
+    {% else %}
+    <input type="hidden" name="destinazione" value="{{ 'rivendita' if tipo == 'vendita' else 'carne' }}">
+    {% endif %}
+    <label>Razza
+        <select id="gruppo-select-razza"></select>
+    </label>
+    <label>Sesso
+        <select id="gruppo-select-sesso"></select>
+    </label>
+    <label>Nati nel
+        <select id="gruppo-select-anno"></select>
+    </label>
+    {% if con_destinazione %}
+    <label>Destinazione d'uso
+        <select id="gruppo-select-destinazione"></select>
+    </label>
+    {% endif %}
+    <label>Numero capi
+        <span class="campo-con-badge">
+            <input type="number" name="numero_capi" id="gruppo-numero" value="1" min="1" required>
+            <span class="badge" id="gruppo-disponibili-hint"></span>
+        </span>
+    </label>
+    {% if tipo == 'vendita' %}
+    <label>Prezzo di vendita totale (€)
+        <input type="number" name="prezzo_vendita" step="0.01" min="0">
+    </label>
+    {% endif %}
+    <button type="submit">Registra</button>
+{% endcall %}
+<script src="{{ url_for('static', filename='pollaio-cascata.js') }}"></script>
+<script>
+    const GRUPPI_POLLAIO = {{ gruppi_pollaio|tojson }};
+    initCascataGruppo("gruppo", GRUPPI_POLLAIO, {{ con_destinazione|tojson }}, {{ destinazioni|tojson }});
+</script>
+{% endblock %}

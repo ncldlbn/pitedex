@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block content %}
+{% call macros.form_page("Nuovo ingresso in pulcinaia") %}
+    <label>Tipo
+        <select name="evento" id="entrata-evento" required>
+            <option value="entrata">Entrata (da incubatrice)</option>
+            <option value="acquisto">Acquisto esterno</option>
+        </select>
+    </label>
+    <label>Razza
+        <select name="razza_id" id="entrata-razza" required>
+            {% for r in razze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}
+        </select>
+    </label>
+    <p class="hint" id="uova-in-attesa-hint" style="margin: 0;"></p>
+    <label>Numero pulcini
+        <input type="number" name="numero_capi" id="entrata-numero" value="1" min="1" required>
+    </label>
+    <label>Data di nascita
+        <input type="date" name="data_nascita" max="{{ oggi_iso }}" required>
+    </label>
+    <label id="entrata-prezzo-label">Prezzo acquisto totale (€)
+        <input type="number" name="prezzo_acquisto" step="0.01" min="0">
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+<script>
+    const uovaInAttesaPerRazza = {{ uova_in_attesa_per_razza|tojson }};
+    (function () {
+        const evento = document.getElementById("entrata-evento");
+        const razzaSelect = document.getElementById("entrata-razza");
+        const numeroCapi = document.getElementById("entrata-numero");
+        const uovaHint = document.getElementById("uova-in-attesa-hint");
+        const prezzoLabel = document.getElementById("entrata-prezzo-label");
+
+        function aggiorna() {
+            const entrata = evento.value === "entrata";
+            prezzoLabel.style.display = entrata ? "none" : "";
+            if (entrata) {
+                const disponibili = uovaInAttesaPerRazza[razzaSelect.value] || 0;
+                numeroCapi.max = disponibili;
+                uovaHint.textContent = disponibili + " uova in attesa per questa razza in incubatrice";
+                uovaHint.style.display = "";
+            } else {
+                numeroCapi.removeAttribute("max");
+                uovaHint.style.display = "none";
+            }
+        }
+        evento.addEventListener("change", aggiorna);
+        razzaSelect.addEventListener("change", aggiorna);
+        aggiorna();
+    })();
+</script>
+{% endblock %}

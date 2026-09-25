@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block content %}
+{% call macros.form_page("Cambio destinazione") %}
+    <input type="hidden" name="razza_id" id="gruppo-razza-id">
+    <input type="hidden" name="sesso" id="gruppo-sesso">
+    <input type="hidden" name="anno_nascita" id="gruppo-anno-nascita">
+    <input type="hidden" name="destinazione" id="gruppo-destinazione">
+    <label>Razza
+        <select id="gruppo-select-razza"></select>
+    </label>
+    <label>Sesso
+        <select id="gruppo-select-sesso"></select>
+    </label>
+    <label>Nati nel
+        <select id="gruppo-select-anno"></select>
+    </label>
+    <label>Destinazione attuale
+        <select id="gruppo-select-destinazione"></select>
+    </label>
+    <label>Numero capi da spostare
+        <span class="campo-con-badge">
+            <input type="number" name="numero_capi" id="gruppo-numero" value="1" min="1" required>
+            <span class="badge" id="gruppo-disponibili-hint"></span>
+        </span>
+    </label>
+    <label>Nuova destinazione
+        <select name="nuova_destinazione" required>
+            {% for k, v in destinazioni.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+        </select>
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+<script src="{{ url_for('static', filename='pollaio-cascata.js') }}"></script>
+<script>
+    const GRUPPI_POLLAIO = {{ gruppi_pollaio|tojson }};
+    initCascataGruppo("gruppo", GRUPPI_POLLAIO, true, {{ destinazioni|tojson }});
+</script>
+{% endblock %}

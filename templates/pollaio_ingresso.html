@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block content %}
+{% call macros.form_page("Nuovo ingresso in pollaio") %}
+    <label>Tipo
+        <select name="evento" id="entrata-evento" required>
+            <option value="acquisto">Acquisto esterno</option>
+            <option value="promozione">Da Pulcinaia</option>
+        </select>
+    </label>
+
+    <label id="acquisto-razza-label">Razza
+        <select id="acquisto-razza" required>
+            {% for r in elenco_razze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}
+        </select>
+    </label>
+    <label id="acquisto-anno-label">Anno di nascita
+        <input type="number" id="acquisto-anno" min="2000" max="{{ oggi_iso[:4] }}" value="{{ oggi_iso[:4] }}" required>
+    </label>
+
+    <label id="promo-gruppo-label">Gruppo (da Pulcinaia)
+        <select id="promo-gruppo" required>
+            {% for l in gruppi_pulcinaia %}
+            <option value="{{ l.razza_id }}|{{ l.data_nascita }}" data-max="{{ l.numero_capi_attuale }}">
+                {{ l.razza_nome }} · nati il {{ l.data_nascita }} · {{ l.numero_capi_attuale }} disponibili
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+    <input type="hidden" id="promo-razza-id">
+    <input type="hidden" id="promo-data-nascita">
+
+    <label>Sesso
+        <select name="sesso" required>
+            <option value="F">Femmina</option>
+            <option value="M">Maschio</option>
+        </select>
+    </label>
+    <label>Destinazione d'uso
+        <select name="destinazione" required>
+            {% for k, v in destinazioni.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Numero capi
+        <input type="number" name="numero_capi" id="entrata-numero" value="1" min="1" required>
+    </label>
+    <label id="acquisto-prezzo-label">Prezzo acquisto totale (€)
+        <input type="number" name="prezzo_acquisto" step="0.01" min="0">
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+<script>
+    (function () {
+        const evento = document.getElementById("entrata-evento");
+        const acquistoRazzaLabel = document.getElementById("acquisto-razza-label");
+        const acquistoAnnoLabel = document.getElementById("acquisto-anno-label");
+        const acquistoPrezzoLabel = document.getElementById("acquisto-prezzo-label");
+        const promoGruppoLabel = document.getElementById("promo-gruppo-label");
+        const acquistoRazza = document.getElementById("acquisto-razza");
+        const acquistoAnno = document.getElementById("acquisto-anno");
+        const promoGruppo = document.getElementById("promo-gruppo");
+        const promoRazzaId = document.getElementById("promo-razza-id");
+        const promoDataNascita = document.getElementById("promo-data-nascita");
+        const numeroCapi = document.getElementById("entrata-numero");
+
+        function aggiornaGruppoPromo() {
+            const opzione = promoGruppo.selectedOptions[0];
+            if (!opzione) return;
+            const [razzaId, dataNascita] = opzione.value.split("|");
+            promoRazzaId.value = razzaId;
+            promoDataNascita.value = dataNascita;
+            numeroCapi.max = opzione.dataset.max;
+        }
+
+        function aggiorna() {
+            const promozione = evento.value === "promozione";
+
+            acquistoRazzaLabel.style.display = promozione ? "none" : "";
+            acquistoAnnoLabel.style.display = promozione ? "none" : "";
+            acquistoPrezzoLabel.style.display = promozione ? "none" : "";
+            promoGruppoLabel.style.display = promozione ? "" : "none";
+
+            if (promozione) {
+                promoRazzaId.name = "razza_id";
+                promoDataNascita.name = "data_nascita";
+                acquistoRazza.removeAttribute("name");
+                acquistoAnno.removeAttribute("name");
+                aggiornaGruppoPromo();
+            } else {
+                acquistoRazza.name = "razza_id";
+                acquistoAnno.name = "anno_nascita";
+                promoRazzaId.removeAttribute("name");
+                promoDataNascita.removeAttribute("name");
+                numeroCapi.removeAttribute("max");
+            }
+        }
+
+        evento.addEventListener("change", aggiorna);
+        promoGruppo.addEventListener("change", aggiornaGruppoPromo);
+        aggiorna();
+    })();
+</script>
+{% endblock %}

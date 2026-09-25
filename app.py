@@ -31,38 +31,37 @@ TIPI_USCITA_POLLAIO = {
 RAZZE_SEED = ["ISA Brown", "Australorp", "Plymouth Rock", "Pepoi", "Moroseta / Silkie"]
 
 # Azioni rapide (home "/"): un box per area, ognuno con l'elenco di tutte le
-# azioni di ingresso/uscita di quell'area. "apri" è l'id (senza prefisso
-# "modal-") del <dialog> da aprire automaticamente sulla pagina di
-# destinazione, via query string (?apri=...) — None per le azioni che hanno
-# già una pagina propria invece di un popup (Registro uova).
+# azioni di ingresso/uscita di quell'area. Ogni azione porta direttamente alla
+# sua pagina di inserimento dati (non un popup su un'altra pagina) — le pagine
+# di Incubazione/Pulcinaia/Pollaio/Uova sono solo visualizzazione di stato.
 AZIONI_RAPIDE = {
     "incubazione": {
-        "icona": "🐣", "nome": "Incubazione", "endpoint_pagina": "incubazione_lista",
+        "icona": "🐣", "nome": "Incubazione",
         "azioni": [
-            {"etichetta": "Registra ingresso", "apri": "entrata"},
-            {"etichetta": "Registra perdita", "apri": "perdita"},
+            {"etichetta": "Registra ingresso", "endpoint": "incubazione_nuova"},
+            {"etichetta": "Registra perdita", "endpoint": "incubazione_perdita"},
         ],
     },
     "pulcinaia": {
-        "icona": "🐤", "nome": "Pulcinaia", "endpoint_pagina": "pulcinaia_lista",
+        "icona": "🐤", "nome": "Pulcinaia",
         "azioni": [
-            {"etichetta": "Registra ingresso", "apri": "entrata"},
-            {"etichetta": "Registra perdita", "apri": "perdita"},
-            {"etichetta": "Registra vendita", "apri": "vendita"},
+            {"etichetta": "Registra ingresso", "endpoint": "pulcinaia_nuova"},
+            {"etichetta": "Registra perdita", "endpoint": "pulcinaia_uscita", "params": {"tipo": "perdita"}},
+            {"etichetta": "Registra vendita", "endpoint": "pulcinaia_uscita", "params": {"tipo": "vendita"}},
         ],
     },
     "pollaio": {
-        "icona": "🐔", "nome": "Pollaio", "endpoint_pagina": "pollaio_lista",
+        "icona": "🐔", "nome": "Pollaio",
         "azioni": [
-            {"etichetta": "Registra ingresso", "apri": "entrata"},
-            {"etichetta": "Registra perdita", "apri": "perdita"},
-            {"etichetta": "Registra vendita", "apri": "vendita"},
-            {"etichetta": "Registra macellazione", "apri": "macellazione"},
-            {"etichetta": "Cambia destinazione", "apri": "cambio-destinazione"},
+            {"etichetta": "Registra ingresso", "endpoint": "pollaio_nuova"},
+            {"etichetta": "Registra perdita", "endpoint": "pollaio_uscita", "params": {"tipo": "perdita"}},
+            {"etichetta": "Registra vendita", "endpoint": "pollaio_uscita", "params": {"tipo": "vendita"}},
+            {"etichetta": "Registra macellazione", "endpoint": "pollaio_uscita", "params": {"tipo": "macellazione"}},
+            {"etichetta": "Cambia destinazione", "endpoint": "pollaio_cambio_destinazione"},
         ],
     },
     "uova": {
-        "icona": "🥚", "nome": "Uova", "endpoint_pagina": "registro_uova_lista",
+        "icona": "🥚", "nome": "Uova",
         "azioni": [
             {"etichetta": "Registra raccolta", "endpoint": "registro_uova_raccolta"},
             {"etichetta": "Registra vendita", "endpoint": "registro_uova_vendita"},
@@ -73,13 +72,10 @@ AZIONI_RAPIDE = {
 
 def _azioni_rapide_gruppo(chiave):
     info = AZIONI_RAPIDE[chiave]
-    azioni = []
-    for a in info["azioni"]:
-        if a.get("apri"):
-            url = url_for(info["endpoint_pagina"], apri=a["apri"])
-        else:
-            url = url_for(a["endpoint"])
-        azioni.append({"etichetta": a["etichetta"], "url": url})
+    azioni = [
+        {"etichetta": a["etichetta"], "url": url_for(a["endpoint"], **a.get("params", {}))}
+        for a in info["azioni"]
+    ]
     return {"chiave": chiave, "icona": info["icona"], "nome": info["nome"], "azioni": azioni}
 
 
@@ -409,16 +405,7 @@ def pollaio_razza_dettaglio(razza_id):
 @app.route("/pollaio")
 def pollaio_lista():
     db = get_db()
-    elenco_razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
-
-    return render_template(
-        "pollaio.html",
-        elenco_razze=elenco_razze,
-        destinazioni=DESTINAZIONI,
-        composizione_razze=pollaio_composizione_per_razza(db),
-        gruppi_pollaio=[dict(g) for g in pollaio_disponibili(db)],
-        gruppi_pulcinaia=pulcinaia_disponibili(db),
-    )
+    return render_template("pollaio.html", composizione_razze=pollaio_composizione_per_razza(db))
 
 
 def eventi_incubatrice_per_razza(db, razza_id=None):
@@ -477,125 +464,137 @@ def incubazioni_per_razza(db):
 @app.route("/incubazione")
 def incubazione_lista():
     db = get_db()
-    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
-    return render_template("incubazione.html", gruppi=incubazioni_per_razza(db), razze=razze)
+    return render_template("incubazione.html", gruppi=incubazioni_per_razza(db))
 
 
-@app.route("/incubazione/nuova", methods=["POST"])
+@app.route("/incubazione/nuova", methods=["GET", "POST"])
 def incubazione_nuova():
     db = get_db()
-    evento = request.form["evento"]
-    razza_id = int(request.form["razza_id"])
-    data = request.form["data"]
-    numero_uova = int(request.form["numero_uova"])
-    prezzo_acquisto = request.form.get("prezzo_acquisto") or None if evento == "acquisto" else None
-    db.execute(
-        """INSERT INTO eventi_incubatrice (razza_id, evento, data, numero_uova, prezzo_acquisto_totale)
-           VALUES (?, ?, ?, ?, ?)""",
-        (razza_id, evento, data, numero_uova, prezzo_acquisto),
-    )
-    db.commit()
-    flash(f"Registrate {numero_uova} uova in incubatrice")
-    return redirect(url_for("incubazione_lista"))
+    if request.method == "POST":
+        evento = request.form["evento"]
+        razza_id = int(request.form["razza_id"])
+        data = request.form["data"]
+        numero_uova = int(request.form["numero_uova"])
+        prezzo_acquisto = request.form.get("prezzo_acquisto") or None if evento == "acquisto" else None
+        db.execute(
+            """INSERT INTO eventi_incubatrice (razza_id, evento, data, numero_uova, prezzo_acquisto_totale)
+               VALUES (?, ?, ?, ?, ?)""",
+            (razza_id, evento, data, numero_uova, prezzo_acquisto),
+        )
+        db.commit()
+        flash(f"Registrate {numero_uova} uova in incubatrice")
+        return redirect(url_for("incubazione_lista"))
+    razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    return render_template("incubazione_ingresso.html", razze=razze)
 
 
-@app.route("/incubazione/perdita", methods=["POST"])
+@app.route("/incubazione/perdita", methods=["GET", "POST"])
 def incubazione_perdita():
     db = get_db()
-    razza_id = int(request.form["razza_id"])
-    pool = _incubatrice_pool_razza(db, razza_id)
-    numero_uova = int(request.form["numero_uova"] or 0)
+    if request.method == "POST":
+        razza_id = int(request.form["razza_id"])
+        pool = _incubatrice_pool_razza(db, razza_id)
+        numero_uova = int(request.form["numero_uova"] or 0)
 
-    if numero_uova < 1 or numero_uova > pool["uova_in_attesa"]:
-        flash("Numero di uova non disponibile per la perdita.")
+        if numero_uova < 1 or numero_uova > pool["uova_in_attesa"]:
+            flash("Numero di uova non disponibile per la perdita.")
+            return redirect(url_for("incubazione_lista"))
+
+        oggi = date.today().isoformat()
+        db.execute(
+            "INSERT INTO eventi_incubatrice (razza_id, evento, data, numero_uova) VALUES (?, 'perdita', ?, ?)",
+            (razza_id, oggi, numero_uova),
+        )
+        db.commit()
+        flash(f"Registrata perdita di {numero_uova} uova")
         return redirect(url_for("incubazione_lista"))
-
-    oggi = date.today().isoformat()
-    db.execute(
-        "INSERT INTO eventi_incubatrice (razza_id, evento, data, numero_uova) VALUES (?, 'perdita', ?, ?)",
-        (razza_id, oggi, numero_uova),
-    )
-    db.commit()
-    flash(f"Registrata perdita di {numero_uova} uova")
-    return redirect(url_for("incubazione_lista"))
+    return render_template("incubazione_perdita.html", gruppi=incubazioni_per_razza(db))
 
 
 @app.route("/pulcinaia")
 def pulcinaia_lista():
     db = get_db()
+    return render_template("pulcinaia.html", gruppi=pulcini_per_razza(db))
+
+
+@app.route("/pulcinaia/nuova", methods=["GET", "POST"])
+def pulcinaia_nuova():
+    db = get_db()
+    if request.method == "POST":
+        evento = request.form["evento"]
+        razza_id = int(request.form["razza_id"])
+        data_nascita = request.form["data_nascita"]
+        numero_capi = int(request.form["numero_capi"] or 1)
+        oggi = date.today().isoformat()
+
+        if evento == "entrata":
+            pool_incubatrice = _incubatrice_pool_razza(db, razza_id)
+            if numero_capi < 1 or numero_capi > pool_incubatrice["uova_in_attesa"]:
+                flash("Numero di pulcini non disponibile in incubatrice per quella razza.")
+                return redirect(url_for("pulcinaia_lista"))
+            db.execute(
+                "INSERT INTO eventi_incubatrice (razza_id, evento, data, numero_uova) VALUES (?, 'trasferimento', ?, ?)",
+                (razza_id, oggi, numero_capi),
+            )
+            db.execute(
+                """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita)
+                   VALUES (?, 'entrata', ?, ?, ?)""",
+                (razza_id, oggi, numero_capi, data_nascita),
+            )
+            flash(f"Trasferiti {numero_capi} pulcini da Incubatrice a Pulcinaia")
+        else:
+            prezzo_acquisto = request.form.get("prezzo_acquisto") or None
+            db.execute(
+                """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita,
+                                                   prezzo_acquisto_totale)
+                   VALUES (?, 'acquisto', ?, ?, ?, ?)""",
+                (razza_id, oggi, numero_capi, data_nascita, prezzo_acquisto),
+            )
+            flash(f"Aggiunti {numero_capi} pulcini (acquisto esterno)")
+
+        db.commit()
+        return redirect(url_for("pulcinaia_lista"))
+
     razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
     uova_in_attesa_per_razza = {p["razza_id"]: p["uova_in_attesa"] for p in eventi_incubatrice_per_razza(db)}
     return render_template(
-        "pulcinaia.html", gruppi=pulcini_per_razza(db), razze=razze,
-        uova_in_attesa_per_razza=uova_in_attesa_per_razza,
-        gruppi_pulcinaia=pulcinaia_disponibili(db),
+        "pulcinaia_ingresso.html", razze=razze, uova_in_attesa_per_razza=uova_in_attesa_per_razza,
     )
 
 
-@app.route("/pulcinaia/nuova", methods=["POST"])
-def pulcinaia_nuova():
+@app.route("/pulcinaia/uscita/<tipo>", methods=["GET", "POST"])
+def pulcinaia_uscita(tipo):
+    if tipo not in TIPI_USCITA_PULCINAIA:
+        abort(404)
     db = get_db()
-    evento = request.form["evento"]
-    razza_id = int(request.form["razza_id"])
-    data_nascita = request.form["data_nascita"]
-    numero_capi = int(request.form["numero_capi"] or 1)
-    oggi = date.today().isoformat()
+    if request.method == "POST":
+        razza_id = int(request.form["razza_id"])
+        data_nascita = request.form["data_nascita"]
+        pool = _pulcinaia_pool(db, razza_id, data_nascita)
 
-    if evento == "entrata":
-        pool_incubatrice = _incubatrice_pool_razza(db, razza_id)
-        if numero_capi < 1 or numero_capi > pool_incubatrice["uova_in_attesa"]:
-            flash("Numero di pulcini non disponibile in incubatrice per quella razza.")
+        numero_capi = int(request.form["numero_capi"] or 1)
+
+        if pool is None or numero_capi < 1 or numero_capi > pool["numero_capi_attuale"]:
+            flash("Numero di pulcini non disponibile in quel gruppo.")
             return redirect(url_for("pulcinaia_lista"))
-        db.execute(
-            "INSERT INTO eventi_incubatrice (razza_id, evento, data, numero_uova) VALUES (?, 'trasferimento', ?, ?)",
-            (razza_id, oggi, numero_capi),
-        )
-        db.execute(
-            """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita)
-               VALUES (?, 'entrata', ?, ?, ?)""",
-            (razza_id, oggi, numero_capi, data_nascita),
-        )
-        flash(f"Trasferiti {numero_capi} pulcini da Incubatrice a Pulcinaia")
-    else:
-        prezzo_acquisto = request.form.get("prezzo_acquisto") or None
+
+        oggi = date.today().isoformat()
+        prezzo_vendita = request.form.get("prezzo_vendita") or None if tipo == "vendita" else None
         db.execute(
             """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita,
-                                               prezzo_acquisto_totale)
-               VALUES (?, 'acquisto', ?, ?, ?, ?)""",
-            (razza_id, oggi, numero_capi, data_nascita, prezzo_acquisto),
+                                               prezzo_vendita_totale)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (razza_id, tipo, oggi, numero_capi, data_nascita, prezzo_vendita),
         )
-        flash(f"Aggiunti {numero_capi} pulcini (acquisto esterno)")
 
-    db.commit()
-    return redirect(url_for("pulcinaia_lista"))
-
-
-@app.route("/pulcinaia/uscita", methods=["POST"])
-def pulcinaia_uscita():
-    db = get_db()
-    razza_id = int(request.form["razza_id"])
-    data_nascita = request.form["data_nascita"]
-    pool = _pulcinaia_pool(db, razza_id, data_nascita)
-
-    evento = request.form["tipo"]
-    numero_capi = int(request.form["numero_capi"] or 1)
-
-    if pool is None or numero_capi < 1 or numero_capi > pool["numero_capi_attuale"]:
-        flash("Numero di pulcini non disponibile in quel gruppo.")
+        db.commit()
+        flash(f"Registrata {TIPI_USCITA_PULCINAIA[tipo].lower()}: {numero_capi} pulcini")
         return redirect(url_for("pulcinaia_lista"))
 
-    oggi = date.today().isoformat()
-    prezzo_vendita = request.form.get("prezzo_vendita") or None if evento == "vendita" else None
-    db.execute(
-        """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita,
-                                           prezzo_vendita_totale)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (razza_id, evento, oggi, numero_capi, data_nascita, prezzo_vendita),
+    return render_template(
+        "pulcinaia_uscita.html", tipo=tipo, tipo_label=TIPI_USCITA_PULCINAIA[tipo],
+        gruppi_pulcinaia=pulcinaia_disponibili(db),
     )
-
-    db.commit()
-    flash(f"Registrata {TIPI_USCITA_PULCINAIA[evento].lower()}: {numero_capi} pulcini")
-    return redirect(url_for("pulcinaia_lista"))
 
 
 @app.route("/query")
@@ -627,49 +626,56 @@ def query():
     )
 
 
-@app.route("/pollaio/nuovo", methods=["POST"])
+@app.route("/pollaio/nuovo", methods=["GET", "POST"])
 def pollaio_nuova():
     db = get_db()
-    evento = request.form["evento"]
-    razza_id = int(request.form["razza_id"])
-    sesso = request.form["sesso"]
-    destinazione = request.form["destinazione"]
-    numero_capi = int(request.form["numero_capi"] or 1)
-    oggi = date.today().isoformat()
+    if request.method == "POST":
+        evento = request.form["evento"]
+        razza_id = int(request.form["razza_id"])
+        sesso = request.form["sesso"]
+        destinazione = request.form["destinazione"]
+        numero_capi = int(request.form["numero_capi"] or 1)
+        oggi = date.today().isoformat()
 
-    if evento == "promozione":
-        data_nascita = request.form["data_nascita"]
-        pool_pulcinaia = _pulcinaia_pool(db, razza_id, data_nascita)
-        if pool_pulcinaia is None or numero_capi < 1 or numero_capi > pool_pulcinaia["numero_capi_attuale"]:
-            flash("Numero di pulcini non disponibile in quel gruppo di Pulcinaia.")
-            return redirect(url_for("pollaio_lista"))
-        anno_nascita = date.fromisoformat(data_nascita).year
+        if evento == "promozione":
+            data_nascita = request.form["data_nascita"]
+            pool_pulcinaia = _pulcinaia_pool(db, razza_id, data_nascita)
+            if pool_pulcinaia is None or numero_capi < 1 or numero_capi > pool_pulcinaia["numero_capi_attuale"]:
+                flash("Numero di pulcini non disponibile in quel gruppo di Pulcinaia.")
+                return redirect(url_for("pollaio_lista"))
+            anno_nascita = date.fromisoformat(data_nascita).year
 
-        db.execute(
-            """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
-                                            anno_nascita, destinazione)
-               VALUES (?, 'promozione', ?, ?, ?, ?, ?)""",
-            (razza_id, oggi, numero_capi, sesso, anno_nascita, destinazione),
-        )
-        db.execute(
-            """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita)
-               VALUES (?, 'promozione', ?, ?, ?)""",
-            (razza_id, oggi, numero_capi, data_nascita),
-        )
-        flash(f"Promossi {numero_capi} capi da Pulcinaia a Pollaio")
-    else:
-        anno_nascita = int(request.form["anno_nascita"])
-        prezzo_acquisto = request.form.get("prezzo_acquisto") or None
-        db.execute(
-            """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
-                                            anno_nascita, destinazione, prezzo_acquisto_totale)
-               VALUES (?, 'acquisto', ?, ?, ?, ?, ?, ?)""",
-            (razza_id, oggi, numero_capi, sesso, anno_nascita, destinazione, prezzo_acquisto),
-        )
-        flash(f"Aggiunti {numero_capi} capi in pollaio (acquisto esterno)")
+            db.execute(
+                """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
+                                                anno_nascita, destinazione)
+                   VALUES (?, 'promozione', ?, ?, ?, ?, ?)""",
+                (razza_id, oggi, numero_capi, sesso, anno_nascita, destinazione),
+            )
+            db.execute(
+                """INSERT INTO eventi_pulcinaia (razza_id, evento, data, numero_capi, data_nascita)
+                   VALUES (?, 'promozione', ?, ?, ?)""",
+                (razza_id, oggi, numero_capi, data_nascita),
+            )
+            flash(f"Promossi {numero_capi} capi da Pulcinaia a Pollaio")
+        else:
+            anno_nascita = int(request.form["anno_nascita"])
+            prezzo_acquisto = request.form.get("prezzo_acquisto") or None
+            db.execute(
+                """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
+                                                anno_nascita, destinazione, prezzo_acquisto_totale)
+                   VALUES (?, 'acquisto', ?, ?, ?, ?, ?, ?)""",
+                (razza_id, oggi, numero_capi, sesso, anno_nascita, destinazione, prezzo_acquisto),
+            )
+            flash(f"Aggiunti {numero_capi} capi in pollaio (acquisto esterno)")
 
-    db.commit()
-    return redirect(url_for("pollaio_lista"))
+        db.commit()
+        return redirect(url_for("pollaio_lista"))
+
+    elenco_razze = db.execute("SELECT id, nome FROM razze ORDER BY nome").fetchall()
+    return render_template(
+        "pollaio_ingresso.html", elenco_razze=elenco_razze, destinazioni=DESTINAZIONI,
+        gruppi_pulcinaia=pulcinaia_disponibili(db),
+    )
 
 
 def _pollaio_pool_dal_form(db, form):
@@ -685,38 +691,57 @@ def _pollaio_pool_dal_form(db, form):
     )
 
 
-@app.route("/pollaio/uscita", methods=["POST"])
-def pollaio_uscita():
+DESTINAZIONE_PER_TIPO_USCITA_POLLAIO = {"vendita": "rivendita", "macellazione": "carne"}
+
+
+@app.route("/pollaio/uscita/<tipo>", methods=["GET", "POST"])
+def pollaio_uscita(tipo):
+    if tipo not in TIPI_USCITA_POLLAIO:
+        abort(404)
     db = get_db()
-    pool = _pollaio_pool_dal_form(db, request.form)
+    if request.method == "POST":
+        pool = _pollaio_pool_dal_form(db, request.form)
+        numero_capi = int(request.form["numero_capi"] or 1)
 
-    evento = request.form["tipo"]
-    numero_capi = int(request.form["numero_capi"] or 1)
+        if pool is None or numero_capi < 1 or numero_capi > pool["numero_capi_attuale"]:
+            flash("Numero di capi non disponibile in quel gruppo.")
+            return redirect(url_for("pollaio_lista"))
 
-    if pool is None or numero_capi < 1 or numero_capi > pool["numero_capi_attuale"]:
-        flash("Numero di capi non disponibile in quel gruppo.")
+        oggi = date.today().isoformat()
+        prezzo_vendita = request.form.get("prezzo_vendita") or None if tipo == "vendita" else None
+
+        db.execute(
+            """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
+                                            anno_nascita, destinazione, prezzo_vendita_totale)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                pool["razza_id"], tipo, oggi, numero_capi,
+                pool["sesso"], pool["anno_nascita"], pool["destinazione"], prezzo_vendita,
+            ),
+        )
+        db.commit()
+        flash(f"Registrata {TIPI_USCITA_POLLAIO[tipo].lower()}: {numero_capi} capi")
         return redirect(url_for("pollaio_lista"))
 
-    oggi = date.today().isoformat()
-    prezzo_vendita = request.form.get("prezzo_vendita") or None if evento == "vendita" else None
-
-    db.execute(
-        """INSERT INTO eventi_pollaio (razza_id, evento, data, numero_capi, sesso,
-                                        anno_nascita, destinazione, prezzo_vendita_totale)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            pool["razza_id"], evento, oggi, numero_capi,
-            pool["sesso"], pool["anno_nascita"], pool["destinazione"], prezzo_vendita,
-        ),
+    con_destinazione = tipo not in DESTINAZIONE_PER_TIPO_USCITA_POLLAIO
+    gruppi = pollaio_disponibili(db, destinazione=DESTINAZIONE_PER_TIPO_USCITA_POLLAIO.get(tipo))
+    return render_template(
+        "pollaio_uscita.html", tipo=tipo, tipo_label=TIPI_USCITA_POLLAIO[tipo],
+        con_destinazione=con_destinazione, gruppi_pollaio=[dict(g) for g in gruppi],
+        destinazioni=DESTINAZIONI,
     )
-    db.commit()
-    flash(f"Registrata {TIPI_USCITA_POLLAIO[evento].lower()}: {numero_capi} capi")
-    return redirect(url_for("pollaio_lista"))
 
 
-@app.route("/pollaio/cambio-destinazione", methods=["POST"])
+@app.route("/pollaio/cambio-destinazione", methods=["GET", "POST"])
 def pollaio_cambio_destinazione():
     db = get_db()
+    if request.method == "GET":
+        return render_template(
+            "pollaio_cambio_destinazione.html",
+            gruppi_pollaio=[dict(g) for g in pollaio_disponibili(db)],
+            destinazioni=DESTINAZIONI,
+        )
+
     pool = _pollaio_pool_dal_form(db, request.form)
 
     numero_capi = int(request.form["numero_capi"] or 1)

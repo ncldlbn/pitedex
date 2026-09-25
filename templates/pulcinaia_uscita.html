@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block content %}
+{% call macros.form_page(tipo_label + " in Pulcinaia") %}
+    <input type="hidden" name="razza_id" id="gruppo-razza-id">
+    <input type="hidden" name="data_nascita" id="gruppo-data-nascita">
+    <label>Gruppo
+        <select id="gruppo-select" required>
+            {% for l in gruppi_pulcinaia %}
+            <option value="{{ l.razza_id }}|{{ l.data_nascita }}" data-max="{{ l.numero_capi_attuale }}">
+                {{ l.razza_nome }} · nati il {{ l.data_nascita }} · {{ l.numero_capi_attuale }} disponibili
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Numero pulcini
+        <input type="number" name="numero_capi" id="gruppo-numero" value="1" min="1" required>
+    </label>
+    {% if tipo == 'vendita' %}
+    <label>Prezzo di vendita totale (€)
+        <input type="number" name="prezzo_vendita" step="0.01" min="0">
+    </label>
+    {% endif %}
+    <button type="submit">Registra</button>
+{% endcall %}
+<script>
+    (function () {
+        const gruppo = document.getElementById("gruppo-select");
+        const numero = document.getElementById("gruppo-numero");
+        const razzaId = document.getElementById("gruppo-razza-id");
+        const dataNascita = document.getElementById("gruppo-data-nascita");
+        function aggiorna() {
+            const opzione = gruppo.selectedOptions[0];
+            if (!opzione) return;
+            const [rid, dn] = opzione.value.split("|");
+            razzaId.value = rid;
+            dataNascita.value = dn;
+            numero.max = opzione.dataset.max;
+        }
+        gruppo.addEventListener("change", aggiorna);
+        aggiorna();
+    })();
+</script>
+{% endblock %}

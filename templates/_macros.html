@@ -8,14 +8,10 @@
 </div>
 {% endmacro %}
 
-{% macro modal_trigger(target_id, label, classe="button-link") %}
-<button type="button" class="{{ classe }}" onclick="document.getElementById('{{ target_id }}').showModal()">{{ label }}</button>
-{% endmacro %}
-
-{% macro azioni_griglia(azioni) %}
-<div class="azioni-griglia">
+{% macro azioni_lista(azioni) %}
+<div class="azioni-lista">
     {% for azione in azioni %}
-    <a class="azione-tile" href="{{ azione.url }}">{{ azione.etichetta }}</a>
+    <a class="azione-voce" href="{{ azione.url }}">{{ azione.etichetta }}</a>
     {% endfor %}
 </div>
 {% endmacro %}
@@ -25,18 +21,6 @@
     <a class="azioni-box-titolo" href="{{ url_for('azioni_area', area=gruppo.chiave) }}">
         <span aria-hidden="true">{{ gruppo.icona }}</span> {{ gruppo.nome }}
     </a>
-    {{ azioni_griglia(gruppo.azioni) }}
+    {{ azioni_lista(gruppo.azioni) }}
 </div>
-{% endmacro %}
-
-{% macro modal(id, titolo, azione=None) %}
-<dialog id="{{ id }}" class="modal">
-    <div class="modal-header">
-        <h2>{{ titolo }}</h2>
-        <button type="button" class="modal-close" onclick="document.getElementById('{{ id }}').close()" aria-label="Chiudi">×</button>
-    </div>
-    <form method="post"{% if azione %} action="{{ azione }}"{% endif %}>
-        {{ caller() }}
-    </form>
-</dialog>
 {% endmacro %}

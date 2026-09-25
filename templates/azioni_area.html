@@ -5,5 +5,5 @@
     <a class="button-link button-link-secondary" href="{{ url_for('index') }}">← Azioni rapide</a>
 </p>
 <h1 class="page-title">{{ gruppo.icona }} {{ gruppo.nome }}</h1>
-{{ macros.azioni_griglia(gruppo.azioni) }}
+{{ macros.azioni_lista(gruppo.azioni) }}
 {% endblock %}

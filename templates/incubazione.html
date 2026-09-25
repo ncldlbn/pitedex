@@ -1,11 +1,6 @@
 {% extends "base.html" %}
-{% import "_macros.html" as macros %}
 {% block content %}
 <div class="azioni-bar">
-    <div class="azioni-bar-gruppo">
-        {{ macros.modal_trigger("modal-entrata", "Registra ingresso") }}
-        {{ macros.modal_trigger("modal-perdita", "Registra perdita", "button-link button-link-secondary") }}
-    </div>
     <div class="controlli-vista">
         <label class="controllo-colonne">
             Colonne
@@ -35,72 +30,7 @@
     {% endfor %}
 </div>
 
-{% call macros.modal("modal-entrata", "Nuovo ingresso in incubatrice", url_for('incubazione_nuova')) %}
-    <label>Tipo
-        <select name="evento" id="entrata-evento" required>
-            <option value="entrata">Entrata (uova proprie)</option>
-            <option value="acquisto">Acquisto (uova fecondate comprate)</option>
-        </select>
-    </label>
-    <label>Razza
-        <select name="razza_id" required>
-            {% for r in razze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}
-        </select>
-    </label>
-    <label>Data
-        <input type="date" name="data" value="{{ oggi_iso }}" max="{{ oggi_iso }}" required>
-    </label>
-    <label>Numero uova
-        <input type="number" name="numero_uova" min="1" value="1" required>
-    </label>
-    <label id="entrata-prezzo-label">Prezzo acquisto totale (€)
-        <input type="number" name="prezzo_acquisto" step="0.01" min="0">
-    </label>
-    <button type="submit">Registra</button>
-{% endcall %}
-
-{% call macros.modal("modal-perdita", "Registra perdita", url_for('incubazione_perdita')) %}
-    <label>Razza
-        <select name="razza_id" id="perdita-razza" required>
-            {% for g in gruppi %}
-            <option value="{{ g.razza_id }}" data-max="{{ g.uova_in_attesa }}">{{ g.razza }} ({{ g.uova_in_attesa }} in attesa)</option>
-            {% endfor %}
-        </select>
-    </label>
-    <label>Uova perse (infertili, problemi di incubazione, o pulcini non arrivati in pulcinaia)
-        <input type="number" name="numero_uova" id="perdita-numero" min="1" value="1" required>
-    </label>
-    <button type="submit">Registra</button>
-{% endcall %}
-
 <script>
-    (function () {
-        const apri = new URLSearchParams(location.search).get("apri");
-        if (apri) {
-            const modale = document.getElementById("modal-" + apri);
-            if (modale) modale.showModal();
-        }
-    })();
-
-    (function () {
-        const evento = document.getElementById("entrata-evento");
-        const prezzoLabel = document.getElementById("entrata-prezzo-label");
-        function aggiornaEntrata() {
-            prezzoLabel.style.display = evento.value === "acquisto" ? "" : "none";
-        }
-        evento.addEventListener("change", aggiornaEntrata);
-        aggiornaEntrata();
-
-        const perditaRazza = document.getElementById("perdita-razza");
-        const perditaNumero = document.getElementById("perdita-numero");
-        function aggiornaPerdita() {
-            const opzione = perditaRazza.selectedOptions[0];
-            perditaNumero.max = opzione ? opzione.dataset.max : 0;
-        }
-        perditaRazza.addEventListener("change", aggiornaPerdita);
-        aggiornaPerdita();
-    })();
-
     (function () {
         const griglia = document.querySelector(".box-grid");
         const sliderColonne = document.getElementById("colonne-slider");

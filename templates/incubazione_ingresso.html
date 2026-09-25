@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block content %}
+{% call macros.form_page("Nuovo ingresso in incubatrice") %}
+    <label>Tipo
+        <select name="evento" id="entrata-evento" required>
+            <option value="entrata">Entrata (uova proprie)</option>
+            <option value="acquisto">Acquisto (uova fecondate comprate)</option>
+        </select>
+    </label>
+    <label>Razza
+        <select name="razza_id" required>
+            {% for r in razze %}<option value="{{ r.id }}">{{ r.nome }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Data
+        <input type="date" name="data" value="{{ oggi_iso }}" max="{{ oggi_iso }}" required>
+    </label>
+    <label>Numero uova
+        <input type="number" name="numero_uova" min="1" value="1" required>
+    </label>
+    <label id="entrata-prezzo-label">Prezzo acquisto totale (€)
+        <input type="number" name="prezzo_acquisto" step="0.01" min="0">
+    </label>
+    <button type="submit">Registra</button>
+{% endcall %}
+<script>
+    (function () {
+        const evento = document.getElementById("entrata-evento");
+        const prezzoLabel = document.getElementById("entrata-prezzo-label");
+        function aggiorna() {
+            prezzoLabel.style.display = evento.value === "acquisto" ? "" : "none";
+        }
+        evento.addEventListener("change", aggiorna);
+        aggiorna();
+    })();
+</script>
+{% endblock %}
