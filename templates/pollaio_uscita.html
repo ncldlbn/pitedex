@@ -1,15 +1,16 @@
 {% extends "base.html" %}
 {% import "_macros.html" as macros %}
 {% block content %}
-{% call macros.form_page(tipo_label + " da Pollaio") %}
+{% call macros.form_page("Uscita da Pollaio") %}
     <input type="hidden" name="razza_id" id="gruppo-razza-id">
     <input type="hidden" name="sesso" id="gruppo-sesso">
     <input type="hidden" name="anno_nascita" id="gruppo-anno-nascita">
-    {% if con_destinazione %}
     <input type="hidden" name="destinazione" id="gruppo-destinazione">
-    {% else %}
-    <input type="hidden" name="destinazione" value="{{ 'rivendita' if tipo == 'vendita' else 'carne' }}">
-    {% endif %}
+    <label>Tipo
+        <select name="tipo" id="tipo-select" required>
+            {% for k, v in tipi.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+        </select>
+    </label>
     <label>Razza
         <select id="gruppo-select-razza"></select>
     </label>
@@ -19,27 +20,45 @@
     <label>Nati nel
         <select id="gruppo-select-anno"></select>
     </label>
-    {% if con_destinazione %}
-    <label>Destinazione d'uso
+    <label id="destinazione-label">Destinazione d'uso
         <select id="gruppo-select-destinazione"></select>
     </label>
-    {% endif %}
     <label>Numero capi
         <span class="campo-con-badge">
             <input type="number" name="numero_capi" id="gruppo-numero" value="1" min="1" required>
             <span class="badge" id="gruppo-disponibili-hint"></span>
         </span>
     </label>
-    {% if tipo == 'vendita' %}
-    <label>Prezzo di vendita totale (€)
+    <label id="prezzo-label">Prezzo di vendita totale (€)
         <input type="number" name="prezzo_vendita" step="0.01" min="0">
     </label>
-    {% endif %}
     <button type="submit">Registra</button>
 {% endcall %}
 <script src="{{ url_for('static', filename='pollaio-cascata.js') }}"></script>
 <script>
     const GRUPPI_POLLAIO = {{ gruppi_pollaio|tojson }};
-    initCascataGruppo("gruppo", GRUPPI_POLLAIO, {{ con_destinazione|tojson }}, {{ destinazioni|tojson }});
+    const DESTINAZIONE_LABEL = {{ destinazioni|tojson }};
+    const DESTINAZIONE_PER_TIPO = { vendita: "rivendita", macellazione: "carne" };
+
+    const tipoSelect = document.getElementById("tipo-select");
+    const destinazioneLabel = document.getElementById("destinazione-label");
+    const prezzoLabel = document.getElementById("prezzo-label");
+    const destinazioneHidden = document.getElementById("gruppo-destinazione");
+
+    function aggiornaTipo() {
+        const tipo = tipoSelect.value;
+        const fissa = DESTINAZIONE_PER_TIPO[tipo] || null;
+        const conDestinazione = !fissa;
+
+        destinazioneLabel.style.display = conDestinazione ? "" : "none";
+        prezzoLabel.style.display = tipo === "vendita" ? "" : "none";
+
+        const righe = fissa ? GRUPPI_POLLAIO.filter(r => r.destinazione === fissa) : GRUPPI_POLLAIO;
+        initCascataGruppo("gruppo", righe, conDestinazione, DESTINAZIONE_LABEL);
+        if (fissa) destinazioneHidden.value = fissa;
+    }
+
+    tipoSelect.addEventListener("change", aggiornaTipo);
+    aggiornaTipo();
 </script>
 {% endblock %}

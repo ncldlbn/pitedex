@@ -37,46 +37,39 @@ RAZZE_SEED = ["ISA Brown", "Australorp", "Plymouth Rock", "Pepoi", "Moroseta / S
 AZIONI_RAPIDE = {
     "uova": {
         "icona": "🥚", "nome": "Uova",
-        "azioni": [
-            {"etichetta": "Registra raccolta", "endpoint": "registro_uova_raccolta"},
-            {"etichetta": "Registra vendita", "endpoint": "registro_uova_vendita"},
-        ],
+        "ingresso": {"etichetta": "Raccolta", "endpoint": "registro_uova_raccolta"},
+        "uscita": {"etichetta": "Vendita", "endpoint": "registro_uova_vendita"},
     },
     "pollaio": {
         "icona": "🐔", "nome": "Pollaio",
-        "azioni": [
-            {"etichetta": "Registra ingresso", "endpoint": "pollaio_nuova"},
-            {"etichetta": "Registra perdita", "endpoint": "pollaio_uscita", "params": {"tipo": "perdita"}},
-            {"etichetta": "Registra vendita", "endpoint": "pollaio_uscita", "params": {"tipo": "vendita"}},
-            {"etichetta": "Registra macellazione", "endpoint": "pollaio_uscita", "params": {"tipo": "macellazione"}},
-            {"etichetta": "Cambia destinazione", "endpoint": "pollaio_cambio_destinazione"},
-        ],
+        "ingresso": {"etichetta": "Ingresso", "endpoint": "pollaio_nuova"},
+        "uscita": {"etichetta": "Uscita", "endpoint": "pollaio_uscita"},
+        "extra": {"etichetta": "Cambio destinazione d'uso", "endpoint": "pollaio_cambio_destinazione"},
     },
     "pulcinaia": {
         "icona": "🐤", "nome": "Pulcinaia",
-        "azioni": [
-            {"etichetta": "Registra ingresso", "endpoint": "pulcinaia_nuova"},
-            {"etichetta": "Registra perdita", "endpoint": "pulcinaia_uscita", "params": {"tipo": "perdita"}},
-            {"etichetta": "Registra vendita", "endpoint": "pulcinaia_uscita", "params": {"tipo": "vendita"}},
-        ],
+        "ingresso": {"etichetta": "Ingresso", "endpoint": "pulcinaia_nuova"},
+        "uscita": {"etichetta": "Uscita", "endpoint": "pulcinaia_uscita"},
     },
     "incubazione": {
         "icona": "🐣", "nome": "Incubazione",
-        "azioni": [
-            {"etichetta": "Registra ingresso", "endpoint": "incubazione_nuova"},
-            {"etichetta": "Registra perdita", "endpoint": "incubazione_perdita"},
-        ],
+        "ingresso": {"etichetta": "Ingresso", "endpoint": "incubazione_nuova"},
+        "uscita": {"etichetta": "Uscita", "endpoint": "incubazione_perdita"},
     },
 }
 
 
 def _azioni_rapide_gruppo(chiave):
     info = AZIONI_RAPIDE[chiave]
-    azioni = [
-        {"etichetta": a["etichetta"], "url": url_for(a["endpoint"], **a.get("params", {}))}
-        for a in info["azioni"]
-    ]
-    return {"chiave": chiave, "icona": info["icona"], "nome": info["nome"], "azioni": azioni}
+
+    def azione(a):
+        return {"etichetta": a["etichetta"], "url": url_for(a["endpoint"], **a.get("params", {}))}
+
+    return {
+        "chiave": chiave, "icona": info["icona"], "nome": info["nome"],
+        "ingresso": azione(info["ingresso"]), "uscita": azione(info["uscita"]),
+        "extra": azione(info["extra"]) if "extra" in info else None,
+    }
 
 
 app = Flask(__name__)
@@ -575,12 +568,13 @@ def pulcinaia_nuova():
     )
 
 
-@app.route("/pulcinaia/uscita/<tipo>", methods=["GET", "POST"])
-def pulcinaia_uscita(tipo):
-    if tipo not in TIPI_USCITA_PULCINAIA:
-        abort(404)
+@app.route("/pulcinaia/uscita", methods=["GET", "POST"])
+def pulcinaia_uscita():
     db = get_db()
     if request.method == "POST":
+        tipo = request.form["tipo"]
+        if tipo not in TIPI_USCITA_PULCINAIA:
+            abort(404)
         razza_id = int(request.form["razza_id"])
         data_nascita = request.form["data_nascita"]
         pool = _pulcinaia_pool(db, razza_id, data_nascita)
@@ -605,7 +599,7 @@ def pulcinaia_uscita(tipo):
         return redirect(url_for("pulcinaia_lista"))
 
     return render_template(
-        "pulcinaia_uscita.html", tipo=tipo, tipo_label=TIPI_USCITA_PULCINAIA[tipo],
+        "pulcinaia_uscita.html", tipi=TIPI_USCITA_PULCINAIA,
         gruppi_pulcinaia=pulcinaia_disponibili(db),
     )
 
@@ -704,15 +698,13 @@ def _pollaio_pool_dal_form(db, form):
     )
 
 
-DESTINAZIONE_PER_TIPO_USCITA_POLLAIO = {"vendita": "rivendita", "macellazione": "carne"}
-
-
-@app.route("/pollaio/uscita/<tipo>", methods=["GET", "POST"])
-def pollaio_uscita(tipo):
-    if tipo not in TIPI_USCITA_POLLAIO:
-        abort(404)
+@app.route("/pollaio/uscita", methods=["GET", "POST"])
+def pollaio_uscita():
     db = get_db()
     if request.method == "POST":
+        tipo = request.form["tipo"]
+        if tipo not in TIPI_USCITA_POLLAIO:
+            abort(404)
         pool = _pollaio_pool_dal_form(db, request.form)
         numero_capi = int(request.form["numero_capi"] or 1)
 
@@ -736,11 +728,9 @@ def pollaio_uscita(tipo):
         flash(f"Registrata {TIPI_USCITA_POLLAIO[tipo].lower()}: {numero_capi} capi")
         return redirect(url_for("pollaio_lista"))
 
-    con_destinazione = tipo not in DESTINAZIONE_PER_TIPO_USCITA_POLLAIO
-    gruppi = pollaio_disponibili(db, destinazione=DESTINAZIONE_PER_TIPO_USCITA_POLLAIO.get(tipo))
     return render_template(
-        "pollaio_uscita.html", tipo=tipo, tipo_label=TIPI_USCITA_POLLAIO[tipo],
-        con_destinazione=con_destinazione, gruppi_pollaio=[dict(g) for g in gruppi],
+        "pollaio_uscita.html", tipi=TIPI_USCITA_POLLAIO,
+        gruppi_pollaio=[dict(g) for g in pollaio_disponibili(db)],
         destinazioni=DESTINAZIONI,
     )
 

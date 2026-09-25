@@ -11,6 +11,8 @@
     --text-on-dark-muted: #b9c4b3;
     --accent: #2f6b41;
     --accent-hover: #24552f;
+    --accent-uscita: #b5552f;
+    --accent-uscita-hover: #954527;
     --border: rgba(36, 35, 31, 0.12);
     --badge-bg: #e4efe1;
     --badge-text: #1e3a2b;
@@ -579,29 +581,52 @@ button:hover {
     margin: 0 0 0.9rem;
 }
 
-.azioni-lista {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+.azioni-coppia {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
 }
 
 .azione-voce {
     display: block;
-    padding: 0.65rem 0.9rem;
-    background: var(--bg-page);
-    border: 1px solid var(--border);
+    text-align: center;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid transparent;
     border-radius: 8px;
-    color: var(--text-primary);
     text-decoration: none;
     font-weight: 600;
-    font-size: 0.92rem;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    font-size: 0.95rem;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.azione-voce:hover {
+.azione-ingresso {
+    background: var(--accent);
+    color: var(--text-on-dark);
+}
+
+.azione-ingresso:hover {
+    background: var(--accent-hover);
+}
+
+.azione-uscita {
+    background: var(--accent-uscita);
+    color: var(--text-on-dark);
+}
+
+.azione-uscita:hover {
+    background: var(--accent-uscita-hover);
+}
+
+.azione-extra {
+    margin-top: 0.6rem;
+    background: var(--bg-page);
+    border-color: var(--border);
+    color: var(--text-secondary);
+}
+
+.azione-extra:hover {
     background: var(--badge-bg);
-    border-color: var(--accent);
-    color: var(--accent);
+    color: var(--text-primary);
 }
 
 /* Login */

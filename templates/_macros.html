@@ -32,19 +32,17 @@
 </script>
 {% endmacro %}
 
-{% macro azioni_lista(azioni) %}
-<div class="azioni-lista">
-    {% for azione in azioni %}
-    <a class="azione-voce" href="{{ azione.url }}">{{ azione.etichetta }}</a>
-    {% endfor %}
-</div>
-{% endmacro %}
-
 {% macro azioni_box(gruppo) %}
 <div class="azioni-box">
     <div class="azioni-box-titolo">
         <span aria-hidden="true">{{ gruppo.icona }}</span> {{ gruppo.nome }}
     </div>
-    {{ azioni_lista(gruppo.azioni) }}
+    <div class="azioni-coppia">
+        <a class="azione-voce azione-ingresso" href="{{ gruppo.ingresso.url }}">{{ gruppo.ingresso.etichetta }}</a>
+        <a class="azione-voce azione-uscita" href="{{ gruppo.uscita.url }}">{{ gruppo.uscita.etichetta }}</a>
+    </div>
+    {% if gruppo.extra %}
+    <a class="azione-voce azione-extra" href="{{ gruppo.extra.url }}">{{ gruppo.extra.etichetta }}</a>
+    {% endif %}
 </div>
 {% endmacro %}

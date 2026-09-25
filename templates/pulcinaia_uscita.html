@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 {% import "_macros.html" as macros %}
 {% block content %}
-{% call macros.form_page(tipo_label + " in Pulcinaia") %}
+{% call macros.form_page("Uscita da Pulcinaia") %}
     <input type="hidden" name="razza_id" id="gruppo-razza-id">
     <input type="hidden" name="data_nascita" id="gruppo-data-nascita">
+    <label>Tipo
+        <select name="tipo" id="tipo-select" required>
+            {% for k, v in tipi.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+        </select>
+    </label>
     <label>Gruppo
         <select id="gruppo-select" required>
             {% for l in gruppi_pulcinaia %}
@@ -16,20 +21,25 @@
     <label>Numero pulcini
         <input type="number" name="numero_capi" id="gruppo-numero" value="1" min="1" required>
     </label>
-    {% if tipo == 'vendita' %}
-    <label>Prezzo di vendita totale (€)
+    <label id="prezzo-label">Prezzo di vendita totale (€)
         <input type="number" name="prezzo_vendita" step="0.01" min="0">
     </label>
-    {% endif %}
     <button type="submit">Registra</button>
 {% endcall %}
 <script>
     (function () {
+        const tipoSelect = document.getElementById("tipo-select");
+        const prezzoLabel = document.getElementById("prezzo-label");
         const gruppo = document.getElementById("gruppo-select");
         const numero = document.getElementById("gruppo-numero");
         const razzaId = document.getElementById("gruppo-razza-id");
         const dataNascita = document.getElementById("gruppo-data-nascita");
-        function aggiorna() {
+
+        function aggiornaTipo() {
+            prezzoLabel.style.display = tipoSelect.value === "vendita" ? "" : "none";
+        }
+
+        function aggiornaGruppo() {
             const opzione = gruppo.selectedOptions[0];
             if (!opzione) return;
             const [rid, dn] = opzione.value.split("|");
@@ -37,8 +47,11 @@
             dataNascita.value = dn;
             numero.max = opzione.dataset.max;
         }
-        gruppo.addEventListener("change", aggiorna);
-        aggiorna();
+
+        tipoSelect.addEventListener("change", aggiornaTipo);
+        gruppo.addEventListener("change", aggiornaGruppo);
+        aggiornaTipo();
+        aggiornaGruppo();
     })();
 </script>
 {% endblock %}

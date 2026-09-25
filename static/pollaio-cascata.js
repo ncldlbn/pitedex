@@ -20,11 +20,22 @@ function popola(select, opzioni) {
 }
 
 function initCascataGruppo(prefix, righeBase, conDestinazione, destinazioneLabel) {
-    const selRazza = document.getElementById(prefix + "-select-razza");
+    // Sostituisce i <select> con un clone vuoto (stesso id, nessun listener):
+    // la funzione può essere richiamata più volte sulla stessa pagina (es.
+    // quando l'utente cambia "Tipo") senza accumulare listener sui vecchi nodi.
+    function rimpiazza(id) {
+        const el = document.getElementById(id);
+        if (!el) return null;
+        const nuovo = el.cloneNode(false);
+        el.replaceWith(nuovo);
+        return nuovo;
+    }
+
+    const selRazza = rimpiazza(prefix + "-select-razza");
     if (!selRazza) return;
-    const selSesso = document.getElementById(prefix + "-select-sesso");
-    const selAnno = document.getElementById(prefix + "-select-anno");
-    const selDestinazione = conDestinazione ? document.getElementById(prefix + "-select-destinazione") : null;
+    const selSesso = rimpiazza(prefix + "-select-sesso");
+    const selAnno = rimpiazza(prefix + "-select-anno");
+    const selDestinazione = conDestinazione ? rimpiazza(prefix + "-select-destinazione") : null;
     const numero = document.getElementById(prefix + "-numero");
     const hint = document.getElementById(prefix + "-disponibili-hint");
     const campi = {
