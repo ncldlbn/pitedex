@@ -127,7 +127,7 @@ def azioni_area(area):
 
 @app.context_processor
 def inject_oggi():
-    return {"oggi": date.today().strftime("%d/%m/%Y"), "oggi_iso": date.today().isoformat()}
+    return {"oggi_iso": date.today().isoformat()}
 
 
 def get_db():

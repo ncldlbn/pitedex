@@ -69,9 +69,31 @@ body {
     display: block;
 }
 
-.navbar-date {
-    color: var(--text-muted);
-    font-size: 0.9rem;
+.navbar-azioni {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.navbar-icona-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 1.15rem;
+    text-decoration: none;
+    color: var(--text-secondary);
+    transition: background 0.15s ease;
+}
+
+.navbar-icona-link:hover {
+    background: var(--bg-page);
+}
+
+.navbar-icona-link.active {
+    background: var(--badge-bg);
 }
 
 /* Layout: sidebar + content */
