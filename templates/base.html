@@ -37,23 +37,11 @@
     <div class="layout">
         <aside class="sidebar">
             <nav>
-                <a href="{{ url_for('registro_uova_lista') }}" class="nav-link {{ 'active' if request.endpoint in ['registro_uova_lista', 'registro_uova_raccolta', 'registro_uova_vendita'] else '' }}">
-                    <span class="nav-icon" aria-hidden="true">🥚</span> Uova
-                </a>
-                <a href="{{ url_for('pollaio_lista') }}" class="nav-link {{ 'active' if request.endpoint == 'pollaio_lista' else '' }}">
-                    <span class="nav-icon" aria-hidden="true">🐔</span> Pollaio
-                </a>
-                <a href="{{ url_for('pulcinaia_lista') }}" class="nav-link {{ 'active' if request.endpoint == 'pulcinaia_lista' else '' }}">
-                    <span class="nav-icon" aria-hidden="true">🐤</span> Pulcinaia
-                </a>
-                <a href="{{ url_for('incubazione_lista') }}" class="nav-link {{ 'active' if request.endpoint == 'incubazione_lista' else '' }}">
-                    <span class="nav-icon" aria-hidden="true">🐣</span> Incubazione
-                </a>
-
-                <div class="nav-separator" role="separator"></div>
-
                 <a href="{{ url_for('bilancio') }}" class="nav-link {{ 'active' if request.endpoint == 'bilancio' else '' }}">
                     <span class="nav-icon" aria-hidden="true">💶</span> Bilancio
+                </a>
+                <a href="{{ url_for('statistiche') }}" class="nav-link {{ 'active' if request.endpoint == 'statistiche' else '' }}">
+                    <span class="nav-icon" aria-hidden="true">📊</span> Statistiche
                 </a>
                 <a href="{{ url_for('proiezioni') }}" class="nav-link {{ 'active' if request.endpoint == 'proiezioni' else '' }}">
                     <span class="nav-icon" aria-hidden="true">📈</span> Proiezioni

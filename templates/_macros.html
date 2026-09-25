@@ -34,9 +34,9 @@
 
 {% macro azioni_box(gruppo) %}
 <div class="azioni-box">
-    <div class="azioni-box-titolo">
+    <a class="azioni-box-titolo" href="{{ gruppo.pagina_url }}">
         <span aria-hidden="true">{{ gruppo.icona }}</span> {{ gruppo.nome }}
-    </div>
+    </a>
     <div class="azioni-coppia">
         <a class="azione-voce azione-ingresso" href="{{ gruppo.ingresso.url }}">{{ gruppo.ingresso.etichetta }}</a>
         <a class="azione-voce azione-uscita" href="{{ gruppo.uscita.url }}">{{ gruppo.uscita.etichetta }}</a>

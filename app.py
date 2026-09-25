@@ -36,23 +36,23 @@ RAZZE_SEED = ["ISA Brown", "Australorp", "Plymouth Rock", "Pepoi", "Moroseta / S
 # di Incubazione/Pulcinaia/Pollaio/Uova sono solo visualizzazione di stato.
 AZIONI_RAPIDE = {
     "uova": {
-        "icona": "🥚", "nome": "Uova",
+        "icona": "🥚", "nome": "Uova", "pagina": "registro_uova_lista",
         "ingresso": {"etichetta": "Raccolta", "endpoint": "registro_uova_raccolta"},
         "uscita": {"etichetta": "Vendita", "endpoint": "registro_uova_vendita"},
     },
     "pollaio": {
-        "icona": "🐔", "nome": "Pollaio",
+        "icona": "🐔", "nome": "Pollaio", "pagina": "pollaio_lista",
         "ingresso": {"etichetta": "Ingresso", "endpoint": "pollaio_nuova"},
         "uscita": {"etichetta": "Uscita", "endpoint": "pollaio_uscita"},
         "extra": {"etichetta": "Cambio destinazione d'uso", "endpoint": "pollaio_cambio_destinazione"},
     },
     "pulcinaia": {
-        "icona": "🐤", "nome": "Pulcinaia",
+        "icona": "🐤", "nome": "Pulcinaia", "pagina": "pulcinaia_lista",
         "ingresso": {"etichetta": "Ingresso", "endpoint": "pulcinaia_nuova"},
         "uscita": {"etichetta": "Uscita", "endpoint": "pulcinaia_uscita"},
     },
     "incubazione": {
-        "icona": "🐣", "nome": "Incubazione",
+        "icona": "🐣", "nome": "Incubazione", "pagina": "incubazione_lista",
         "ingresso": {"etichetta": "Ingresso", "endpoint": "incubazione_nuova"},
         "uscita": {"etichetta": "Uscita", "endpoint": "incubazione_perdita"},
     },
@@ -67,6 +67,7 @@ def _azioni_rapide_gruppo(chiave):
 
     return {
         "chiave": chiave, "icona": info["icona"], "nome": info["nome"],
+        "pagina_url": url_for(info["pagina"]),
         "ingresso": azione(info["ingresso"]), "uscita": azione(info["uscita"]),
         "extra": azione(info["extra"]) if "extra" in info else None,
     }
@@ -877,6 +878,11 @@ def _salva_razza(db, form, razza_id=None):
 @app.route("/bilancio")
 def bilancio():
     return render_template("bilancio.html")
+
+
+@app.route("/statistiche")
+def statistiche():
+    return render_template("statistiche.html")
 
 
 @app.route("/proiezioni")

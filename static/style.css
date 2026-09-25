@@ -574,11 +574,17 @@ button:hover {
 }
 
 .azioni-box-titolo {
+    display: block;
     font-family: var(--font-display);
     font-weight: 600;
     font-size: 1.1rem;
     color: var(--text-primary);
+    text-decoration: none;
     margin: 0 0 0.9rem;
+}
+
+.azioni-box-titolo:hover {
+    color: var(--accent);
 }
 
 .azioni-coppia {
