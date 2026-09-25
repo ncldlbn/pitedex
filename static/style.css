@@ -108,6 +108,10 @@ body {
     flex-shrink: 0;
     background: var(--bg-sidebar);
     padding: 1.25rem 0.75rem;
+    position: sticky;
+    top: var(--navbar-h);
+    height: calc(100vh - var(--navbar-h));
+    overflow-y: auto;
 }
 
 .sidebar nav {
@@ -646,6 +650,7 @@ button:hover {
     .sidebar {
         width: 100%;
         padding: 0.75rem;
+        height: auto;
     }
 
     .sidebar nav {

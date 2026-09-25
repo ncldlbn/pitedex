@@ -55,6 +55,7 @@
             schede.forEach(el => griglia.appendChild(el));
         }
 
+        sliderColonne.value = window.innerWidth <= 720 ? 1 : 3;
         sliderColonne.addEventListener("input", aggiornaColonne);
         selectOrdine.addEventListener("change", aggiornaOrdine);
         aggiornaColonne();
