@@ -39,7 +39,9 @@
 </div>
 <script src="{{ url_for('static', filename='vista-controlli.js') }}"></script>
 <script>
-    initControlliVista({{ vista.colonne_mobile }}, {{ vista.colonne_desktop }});
+    document.addEventListener("DOMContentLoaded", function () {
+        initControlliVista({{ vista.colonne_mobile }}, {{ vista.colonne_desktop }});
+    });
 </script>
 {% endmacro %}
 
