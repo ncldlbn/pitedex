@@ -839,4 +839,61 @@ button:hover {
     .content {
         padding: 1.5rem;
     }
+
+    .tabella-log table,
+    .tabella-log thead,
+    .tabella-log tbody,
+    .tabella-log tr,
+    .tabella-log td {
+        display: block;
+        width: 100%;
+    }
+
+    .tabella-log thead {
+        display: none;
+    }
+
+    .tabella-log tbody tr {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .tabella-log tbody tr:last-child {
+        margin-bottom: 0;
+    }
+
+    .tabella-log td {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.75rem;
+        padding: 0.35rem 0;
+        border-bottom: 1px dashed var(--border);
+        text-align: right;
+    }
+
+    .tabella-log td:last-child {
+        border-bottom: none;
+    }
+
+    .tabella-log td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        text-align: left;
+        flex-shrink: 0;
+    }
+
+    .tabella-log td.empty {
+        display: block;
+        text-align: center;
+        border-bottom: none;
+    }
+
+    .tabella-log td.empty::before {
+        content: none;
+    }
 }

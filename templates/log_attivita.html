@@ -33,7 +33,7 @@
     </form>
 </div>
 
-<div class="card matrice-scroll">
+<div class="card matrice-scroll tabella-log">
     <table>
         <thead>
             <tr>
@@ -49,13 +49,13 @@
         <tbody>
             {% for e in eventi %}
             <tr>
-                <td>{{ e.data }}</td>
-                <td>{{ e.icona }} {{ e.area }}</td>
-                <td>{{ e.evento }}</td>
-                <td>{{ e.razza }}</td>
-                <td>{{ e.dettaglio }}</td>
-                <td class="num">{{ e.segno }}{{ e.quantita }} {{ e.unita }}</td>
-                <td class="num">{% if e.prezzo %}€ {{ '%.2f'|format(e.prezzo) }} ({{ e.prezzo_tipo }}){% else %}—{% endif %}</td>
+                <td data-label="Data">{{ e.data }}</td>
+                <td data-label="Area">{{ e.icona }} {{ e.area }}</td>
+                <td data-label="Evento">{{ e.evento }}</td>
+                <td data-label="Razza">{{ e.razza }}</td>
+                <td data-label="Dettaglio">{{ e.dettaglio }}</td>
+                <td class="num" data-label="Quantità">{{ e.segno }}{{ e.quantita }} {{ e.unita }}</td>
+                <td class="num" data-label="Prezzo">{% if e.prezzo %}€ {{ '%.2f'|format(e.prezzo) }} ({{ e.prezzo_tipo }}){% else %}—{% endif %}</td>
             </tr>
             {% else %}
             <tr><td colspan="7" class="empty">Nessun evento corrisponde ai filtri.</td></tr>
