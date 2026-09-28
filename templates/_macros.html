@@ -1,10 +1,12 @@
 {% macro form_page(titolo, hint=None) %}
-<h1 class="page-title">{{ titolo }}</h1>
-{% if hint %}<p class="hint" style="margin: -0.75rem 0 1.25rem;">{{ hint }}</p>{% endif %}
-<div class="card card-form">
-<form method="post">
-{{ caller() }}
-</form>
+<div class="form-page">
+    <h1 class="page-title">{{ titolo }}</h1>
+    {% if hint %}<p class="hint" style="margin: -0.75rem 0 1.25rem;">{{ hint }}</p>{% endif %}
+    <div class="card card-form">
+    <form method="post">
+    {{ caller() }}
+    </form>
+    </div>
 </div>
 {% endmacro %}
 

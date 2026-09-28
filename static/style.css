@@ -342,8 +342,9 @@ a.razza-name:hover {
     padding: 1.25rem;
 }
 
-.card-form {
+.form-page {
     max-width: 460px;
+    margin: 0 auto;
 }
 
 /* Table */
@@ -574,6 +575,7 @@ button:hover {
     flex-direction: column;
     gap: 1rem;
     max-width: 480px;
+    margin: 0 auto;
 }
 
 .azioni-box {
@@ -650,6 +652,7 @@ button:hover {
 
 .manuale-testo {
     max-width: 640px;
+    margin: 0 auto;
 }
 
 .manuale-testo p,

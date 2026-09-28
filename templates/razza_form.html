@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="page-title">{{ 'Modifica razza' if razza else 'Nuova razza' }}</h1>
-<div class="card card-form">
-<form method="post">
-    <label>Nome
-        <input type="text" name="nome" value="{{ razza.nome if razza else '' }}" required>
-    </label>
-    <button type="submit">Salva</button>
-</form>
+<div class="form-page">
+    <h1 class="page-title">{{ 'Modifica razza' if razza else 'Nuova razza' }}</h1>
+    <div class="card card-form">
+    <form method="post">
+        <label>Nome
+            <input type="text" name="nome" value="{{ razza.nome if razza else '' }}" required>
+        </label>
+        <button type="submit">Salva</button>
+    </form>
+    </div>
 </div>
 {% endblock %}
