@@ -160,17 +160,16 @@ body {
     width: 100%;
     min-width: 0;
     padding: 2rem 2.5rem;
+    /* Riserva a destra uno spazio vuoto pari alla sidebar: l'area utile
+       (fra questo padding e quello sinistro) resta così simmetrica
+       rispetto allo schermo intero, a qualsiasi larghezza di finestra —
+       niente calcoli su vw, niente casi limite da gestire a parte. */
+    padding-right: calc(2.5rem + var(--sidebar-w));
 }
 
-/* Centrata rispetto allo schermo intero, non solo allo spazio libero dopo
-   la sidebar (che resta ancorata al bordo sinistro): il margine sinistro
-   compensa la larghezza della sidebar. Sotto una certa larghezza di
-   finestra il calcolo darebbe un margine negativo (sovrapposizione alla
-   sidebar) — max(0px, ...) lo blocca a zero e il contenuto torna ad
-   allinearsi subito dopo la sidebar, come impaginazione di sicurezza. */
 .content-interno {
     max-width: 1100px;
-    margin-left: max(0px, calc(50vw - 550px - var(--sidebar-w)));
+    margin: 0 auto;
 }
 
 /* Titles */
